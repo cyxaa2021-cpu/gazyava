@@ -18,6 +18,9 @@
 <!-- Leaflet — библиотека для карты -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<!-- Firebase — облачная база, чтобы точки «Газява Family» видели все -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
 <style>
   html, body {
@@ -63,11 +66,54 @@
     padding: 4px 12px;
   }
   .shop {
-    display: flex; justify-content: space-between; gap: 10px;
+    display: flex; justify-content: space-between; align-items: center; gap: 10px;
     padding: 8px 0; border-bottom: 1px solid #39ff1422;
     color: #39ff14; text-decoration: none; font-size: 15px;
   }
   .shop.star { color: #ffd400; }
+  .shop.user { color: #00e5ff; }            /* точки Газява Family — голубые */
+  .shop .nm { flex: 1; min-width: 0; cursor: pointer; }
+  .shop .sub { font-size: 11px; opacity: 0.75; }
+  .shop.visited .nm { opacity: 0.6; }
+  .mini {
+    font: inherit; font-size: 11px; padding: 4px 6px; border-radius: 6px;
+    border: 1px solid currentColor; background: none; color: inherit; white-space: nowrap;
+  }
+  #stats { font-size: 11px; margin-top: 2px; color: #fff; opacity: 0.85; }
+
+  /* всплывающее сообщение сверху */
+  #toast {
+    position: absolute; left: 50%; top: calc(env(safe-area-inset-top) + 70px); transform: translateX(-50%);
+    z-index: 5000; max-width: 90%; display: none; text-align: center; font-size: 14px;
+    background: #000; border: 1px solid #ffd400; color: #ffd400; padding: 10px 14px;
+    border-radius: 10px; box-shadow: 0 0 16px #ffd40088;
+  }
+
+  /* окно точки (добавить / изменить) */
+  .overlay {
+    position: absolute; inset: 0; z-index: 4000; background: #000d;
+    display: none; align-items: center; justify-content: center; padding: 16px;
+  }
+  .overlay.show { display: flex; }
+  .panel {
+    width: 100%; max-width: 360px; box-sizing: border-box; padding: 16px;
+    background: #0a1a0a; border: 1px solid #39ff14; border-radius: 14px;
+  }
+  .panel h2 { margin: 0 0 6px; font-size: 18px; text-align: center; color: #fff; }
+  .panel label { display: block; font-size: 13px; margin: 10px 0 4px; opacity: 0.85; }
+  .panel input {   /* 16px — чтобы айфон не приближал экран при вводе */
+    width: 100%; box-sizing: border-box; font: inherit; font-size: 16px; padding: 8px;
+    border-radius: 8px; border: 1px solid #39ff1488; background: #000; color: #fff;
+  }
+  .choice, .btns { display: flex; gap: 8px; }
+  .btns { flex-wrap: wrap; margin-top: 16px; }
+  .choice button, .btns button {
+    flex: 1; font: inherit; font-size: 14px; padding: 10px 6px; border-radius: 8px;
+    border: 1px solid #39ff14; background: none; color: #39ff14;
+  }
+  .choice button.on, .btns .main { background: #39ff14; color: #000; font-weight: bold; }
+  .btns .danger { border-color: #ff4d4d; color: #ff4d4d; }
+  .panel .info { font-size: 12px; opacity: 0.7; text-align: center; }
 
   /* стартовый экран с кнопкой */
   #start {
@@ -126,6 +172,15 @@
     border-radius: 8px; border: 1px solid #39ff14; background: none; color: #39ff14;
   }
   .card.selected .pick { background: #ffd400; border-color: #ffd400; color: #000; }
+  .card .badge { font-size: 11px; color: #ffd400; }
+
+  /* «Газява дня» */
+  #daily {
+    display: flex; align-items: center; gap: 10px; margin: 0 12px 12px; padding: 10px;
+    border: 1px solid #ffd400; border-radius: 12px; background: #1a1400; color: #ffd400;
+  }
+  #daily .txt { flex: 1; font-size: 13px; line-height: 1.4; }
+  #daily b { color: #fff; font-size: 16px; }
 
   /* ===== Вкладка «Кликер» ===== */
   #clicker { text-align: center; padding-bottom: 20px; }
@@ -164,6 +219,42 @@
   .upgrade .title { color: #fff; font-weight: bold; font-size: 14px; }
   .upgrade .sub { font-size: 12px; opacity: 0.8; }
   .upgrade .cost { font-size: 13px; white-space: nowrap; }
+
+  /* ===== Достижения ===== */
+  .section-title { margin: 22px 0 8px; font-size: 16px; color: #fff; }
+  #achList {
+    display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px;
+    max-width: 420px; margin: 0 auto; padding: 0 12px;
+  }
+  .ach { border: 1px solid #39ff1433; border-radius: 10px; padding: 8px 4px; font-size: 11px; opacity: 0.35; }
+  .ach .ico { font-size: 26px; display: block; }
+  .ach.got { opacity: 1; border-color: #ffd400; color: #ffd400; }
+
+  /* ===== Мини-игра «Поймай пузырь» ===== */
+  #catchBtn { margin-top: 16px; font-size: 16px; padding: 12px 20px; }
+  #catchGame { position: absolute; inset: 0; z-index: 4000; background: #001a1f; display: none; overflow: hidden; }
+  #catchField { position: absolute; inset: 0; }
+  #catchTop {
+    position: absolute; left: 0; right: 0; top: calc(env(safe-area-inset-top) + 12px); z-index: 2;
+    text-align: center; font-size: 20px; color: #fff; pointer-events: none;
+  }
+  #catchExit {
+    position: absolute; right: 12px; top: calc(env(safe-area-inset-top) + 8px); z-index: 3;
+    font-size: 20px; width: 40px; height: 40px; border-radius: 50%;
+    border: 1px solid #39ff14; background: #000; color: #39ff14;
+  }
+  .cb {   /* пузырь летит снизу вверх */
+    position: absolute; bottom: -100px; border-radius: 50%;
+    border: 3px solid #aefcff; background: radial-gradient(circle at 30% 30%, #ffffffaa, #aefcff22 60%);
+    animation: rise linear forwards; -webkit-tap-highlight-color: transparent;
+  }
+  .cb.gold { border-color: #ffd400; background: radial-gradient(circle at 30% 30%, #fff, #ffd40055 60%); }
+  @keyframes rise { to { transform: translateY(calc(-100vh - 120px)); } }
+  #catchEnd {
+    position: absolute; inset: 0; z-index: 4; background: #000c; display: none;
+    flex-direction: column; align-items: center; justify-content: center; gap: 14px; text-align: center;
+  }
+  #catchResult { font-size: 18px; line-height: 1.6; color: #fff; }
 </style>
 </head>
 <body>
@@ -177,8 +268,10 @@
       <h1>ЛОКАТОР ГАЗЯВЫ</h1>
       <div id="status">Запуск...</div>
       <div id="gps"></div>
+      <div id="stats"></div>
     </header>
     <div id="buttons">
+      <button id="addBtn" title="Добавить точку">📍</button>
       <button id="mapBtn" title="Вид карты">🗺️</button>
       <button id="soundBtn" title="Звук">🔊</button>
     </div>
@@ -199,6 +292,7 @@
   <div class="scroll">
     <div class="page-title"><h1>АССОРТИМЕНТ</h1></div>
     <div id="chosen"></div>
+    <div id="daily"></div>
     <div id="catalog"></div>
   </div>
 </div>
@@ -214,6 +308,9 @@
       <button id="bigBottle"></button>
       <div id="bottleName"></div>
       <div id="upgrades"></div>
+      <button id="catchBtn" class="green-btn">🎮 Поймай пузырь</button>
+      <div class="section-title">🏆 Достижения</div>
+      <div id="achList"></div>
     </div>
   </div>
 </div>
@@ -225,6 +322,50 @@
   <button data-tab="tab-clicker"><span class="ico">👆</span>Кликер</button>
 </div>
 
+<!-- ===== Окно точки Газява Family ===== -->
+<div class="overlay" id="pointForm">
+  <div class="panel">
+    <h2 id="formTitle"></h2>
+    <div class="info" id="formInfo"></div>
+    <label>Название (ларёк, киоск, автомат...)</label>
+    <input id="fName" maxlength="40" placeholder="Ларёк у остановки">
+    <label>Газява есть?</label>
+    <div class="choice">
+      <button id="hasYes">✅ Есть</button>
+      <button id="hasNo">❌ Нет</button>
+    </div>
+    <div id="tempBox">
+      <label>Какая?</label>
+      <div class="choice">
+        <button id="coldBtn">🧊 Холодная</button>
+        <button id="warmBtn">🌡️ Тёплая</button>
+      </div>
+    </div>
+    <label>Что есть (необязательно)</label>
+    <input id="fNote" maxlength="60" placeholder="Байкал, Тархун, Кола">
+    <div class="btns">
+      <button class="main" id="fSave">💾 Сохранить</button>
+      <button id="fCancel">Отмена</button>
+      <button id="fRoute">🚶 Маршрут</button>
+      <button class="danger" id="fDelete">🗑 Удалить</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Мини-игра «Поймай пузырь» ===== -->
+<div id="catchGame">
+  <div id="catchField"></div>
+  <div id="catchTop"></div>
+  <button id="catchExit">✖</button>
+  <div id="catchEnd">
+    <div id="catchResult"></div>
+    <button class="green-btn" id="catchAgain">🔁 Ещё раз</button>
+    <button class="green-btn" id="catchClose">Выйти</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
 <script>
 // ===== Настройки =====
 const SEARCH_RADIUS = 1500;   // в каком радиусе ищем магазины, метров
@@ -232,6 +373,10 @@ const REFRESH_DISTANCE = 300; // если отошли дальше — ищем
 const SWEEP_TIME = 4000;      // один оборот луча радара, мс
 const GREEN = "57,255,20";    // цвет радара (r,g,b)
 const GOLD = "255,212,0";     // цвет для «Магнита»
+const CYAN = "0,229,255";     // точка Family, газява есть
+const RED = "255,77,77";      // точка Family, газявы нет
+const VISIT_BONUS = 500;      // сколько пузырей в кликер за посещение точки
+const VISIT_DISTANCE = 100;   // отметить «Был тут» можно не дальше, метров
 
 let map, canvas, ctx;
 let me = null;           // где сейчас телефон: {lat, lon, heading}
@@ -253,6 +398,7 @@ let pingedThisTurn = false;
 document.getElementById("startBtn").onclick = start;
 document.getElementById("mapBtn").onclick = toggleMapStyle;
 document.getElementById("soundBtn").onclick = toggleSound;
+document.getElementById("addBtn").onclick = () => openPointForm(null);
 
 function start() {
   ensureAudio();
@@ -306,7 +452,9 @@ function onPosition(pos) {
     `📍 ${me.lat.toFixed(5)}, ${me.lon.toFixed(5)}  точность ±${Math.round(c.accuracy)} м`;
 
   for (const s of shops) s.dist = distance(me, s);
+  for (const p of points) p.dist = distance(me, p);
   updateList();
+  updateStats();
   // первый раз или ушли далеко — ищем магазины заново
   if (!lastLoadPos || distance(me, lastLoadPos) > REFRESH_DISTANCE) loadShops();
 }
@@ -359,23 +507,48 @@ async function loadShops() {
 
 // ===== Список ближайших точек =====
 
+// в списке — магазины и точки Family вперемешку, по расстоянию
 function updateList() {
-  shops.sort((a, b) => a.dist - b.dist);
+  const nearPoints = points.filter(p => p.dist <= SEARCH_RADIUS);
+  const all = shops.concat(nearPoints);
+  all.sort((a, b) => a.dist - b.dist);
   const list = document.getElementById("list");
   list.innerHTML = "";
-  for (const s of shops.slice(0, 10)) {
-    const row = document.createElement("a");
-    row.className = s.star ? "shop star" : "shop";
-    // по нажатию — пеший маршрут в Яндекс Картах
-    row.href = `https://yandex.ru/maps/?rtext=~${s.lat},${s.lon}&rtt=pd`;
-    row.target = "_blank";
-    const name = document.createElement("span");
-    name.textContent = (s.star ? "⭐ " : "🥤 ") + s.name;
+  for (const s of all.slice(0, 12)) {
+    const isVisited = !!visited[placeKey(s)];
+    const row = document.createElement("div");
+    row.className = "shop" + (s.star ? " star" : "") + (s.user ? " user" : "") + (isVisited ? " visited" : "");
+
+    // название (textContent, а не innerHTML — названия пишут пользователи, так безопаснее)
+    const info = document.createElement("div");
+    info.className = "nm";
+    const name = document.createElement("div");
+    name.textContent = (s.user ? "📌 " : s.star ? "⭐ " : "🥤 ") + s.name;
+    info.appendChild(name);
+    if (s.user) {
+      const sub = document.createElement("div");
+      sub.className = "sub";
+      sub.textContent = pointStatus(s) + (s.note ? " · " + s.note : "") + " · " + ago(s.updated);
+      info.appendChild(sub);
+    }
+    // нажатие: точка Family — окно с подробностями, магазин — маршрут в Яндекс Картах
+    info.onclick = () => s.user ? openPointForm(s) : openRoute(s);
+
     const dist = document.createElement("span");
     dist.textContent = formatDist(s.dist);
-    row.append(name, dist);
+
+    const btn = document.createElement("button");
+    btn.className = "mini";
+    btn.textContent = isVisited ? "✅" : "Был тут";
+    btn.onclick = () => visitPlace(s);
+
+    row.append(info, dist, btn);
     list.appendChild(row);
   }
+}
+
+function openRoute(s) {
+  window.open(`https://yandex.ru/maps/?rtext=~${s.lat},${s.lon}&rtt=pd`, "_blank");
 }
 
 // ===== Рисование радара (60 раз в секунду) =====
@@ -429,9 +602,9 @@ function draw(time) {
   // новый оборот луча — снова можно сыграть «пинг» подлодки
   if (angle < prevAngle) pingedThisTurn = false;
 
-  // магазины: вспыхивают, когда луч проходит над ними, и потом гаснут
+  // магазины и точки Family: вспыхивают, когда луч проходит над ними, и потом гаснут
   let beep = false;
-  for (const s of shops) {
+  for (const s of shops.concat(points)) {
     const p = map.latLngToContainerPoint([s.lat, s.lon]);
     const dx = p.x - c.x, dy = p.y - c.y;
     if (Math.hypot(dx, dy) > R) continue;           // за краем радара — не видно
@@ -442,16 +615,22 @@ function draw(time) {
     const age = (time - s.hit) / SWEEP_TIME;         // 0 — только что, 1 — оборот назад
     if (s.hit && age < 1) {
       const alpha = 1 - age;
-      const color = s.star ? GOLD : GREEN;
+      let color = s.star ? GOLD : GREEN;
+      let label = s.name;
+      if (s.user) {
+        color = s.has ? CYAN : RED;
+        label += s.has ? (s.cold ? " 🧊" : " 🌡️") : " ❌";
+      }
+      if (visited[placeKey(s)]) label += " ✅";
       ctx.fillStyle = `rgba(${color},${alpha})`;
       ctx.shadowColor = `rgb(${color})`;
       ctx.shadowBlur = 15 * alpha;
       ctx.beginPath();
-      ctx.arc(p.x, p.y, s.star ? 8 : 6, 0, Math.PI * 2);
+      ctx.arc(p.x, p.y, s.star || s.user ? 8 : 6, 0, Math.PI * 2);
       ctx.fill();
       ctx.shadowBlur = 0;
       ctx.font = "12px Courier New";
-      ctx.fillText(s.name, p.x + 10, p.y + 4);
+      ctx.fillText(label, p.x + 10, p.y + 4);
     }
   }
   if (beep) onGazyavaFound(time);
@@ -584,6 +763,194 @@ function toggleSound() {
   document.getElementById("soundBtn").textContent = soundOn ? "🔊" : "🔇";
 }
 
+// ===== Точки «Газява Family» (ларьки, киоски — добавляют сами пользователи) =====
+// Конфиг проекта из консоли Firebase (инструкция в FIREBASE.txt).
+// Если поставить null — точки будут храниться только на этом телефоне.
+// apiKey не секретный: доступ к базе ограничивают правила Firestore
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyCU-WCNy0G3ReJrpfM9BVeAjc6NwaboyUo",
+  authDomain: "gazyava-3df89.firebaseapp.com",
+  projectId: "gazyava-3df89",
+  storageBucket: "gazyava-3df89.firebasestorage.app",
+  messagingSenderId: "147703321092",
+  appId: "1:147703321092:web:7ab29b9c1eced85c491b51",
+};
+
+let db = null;        // облачная база Firestore (если подключена)
+let points = [];      // точки: {id, name, lat, lon, has, cold, note, updated}
+let editing = null;   // какую точку открыли в окне (null — новая)
+let formHas = true;   // что выбрано в окне: газява есть?
+let formCold = true;  // холодная?
+
+function initPoints() {
+  if (FIREBASE_CONFIG && window.firebase) {
+    firebase.initializeApp(FIREBASE_CONFIG);
+    db = firebase.firestore();
+    // onSnapshot — база сама присылает изменения, как только кто-то добавил или поменял точку
+    db.collection("points").limit(500).onSnapshot(snap => {
+      points = snap.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+      onPointsChanged();
+    }, () => toast("Не могу загрузить точки Газява Family 😢"));
+  } else {
+    points = loadData("gazyava_points", []);
+    onPointsChanged();
+  }
+}
+
+// точки обновились — пересчитываем расстояния и перерисовываем список
+function onPointsChanged() {
+  for (const p of points) {
+    p.user = true;        // отличаем точку Family от магазина из Nominatim
+    p.hit = p.hit || 0;
+    if (me) p.dist = distance(me, p);
+  }
+  updateList();
+  updateStats();
+}
+
+// только данные точки (без служебных dist, hit) — это и сохраняем
+function pointFields(p) {
+  return { name: p.name, lat: p.lat, lon: p.lon, has: p.has, cold: p.cold, note: p.note, updated: p.updated };
+}
+
+function pointStatus(p) {
+  if (!p.has) return "❌ газявы нет";
+  return p.cold ? "✅ есть · 🧊 холодная" : "✅ есть · 🌡️ тёплая";
+}
+
+function openPointForm(p) {
+  if (!p && !me) { toast("Сначала дождись геопозиции 📡"); return; }
+  editing = p;
+  document.getElementById("formTitle").textContent = p ? "📌 " + p.name : "📍 Новая точка";
+  document.getElementById("formInfo").textContent = p
+    ? `Обновлено ${ago(p.updated)}` + (p.dist !== undefined ? ` · ${formatDist(p.dist)} от тебя` : "")
+    : "Точка встанет там, где ты сейчас стоишь";
+  document.getElementById("fName").value = p ? p.name : "";
+  document.getElementById("fNote").value = p ? (p.note || "") : "";
+  formHas = p ? p.has : true;
+  formCold = p ? p.cold : true;
+  // «Маршрут» и «Удалить» нужны только для уже существующей точки
+  document.getElementById("fRoute").style.display = p ? "" : "none";
+  document.getElementById("fDelete").style.display = p ? "" : "none";
+  updateFormButtons();
+  document.getElementById("pointForm").classList.add("show");
+}
+
+function closePointForm() {
+  document.getElementById("pointForm").classList.remove("show");
+}
+
+// подсвечиваем выбранные варианты; если газявы нет — «холодная/тёплая» прячем
+function updateFormButtons() {
+  document.getElementById("hasYes").classList.toggle("on", formHas);
+  document.getElementById("hasNo").classList.toggle("on", !formHas);
+  document.getElementById("coldBtn").classList.toggle("on", formCold);
+  document.getElementById("warmBtn").classList.toggle("on", !formCold);
+  document.getElementById("tempBox").style.display = formHas ? "" : "none";
+}
+
+function savePoint() {
+  const name = document.getElementById("fName").value.trim().slice(0, 40);
+  if (!name) { toast("Напиши название точки"); return; }
+  const isNew = !editing;
+  const data = {
+    name: name,
+    note: document.getElementById("fNote").value.trim().slice(0, 60),
+    has: formHas,
+    cold: formCold,
+    updated: Date.now(),                 // когда последний раз проверяли
+    lat: isNew ? me.lat : editing.lat,   // новая точка — там, где мы стоим
+    lon: isNew ? me.lon : editing.lon,
+  };
+
+  if (db) {
+    const req = isNew ? db.collection("points").add(data)
+                      : db.collection("points").doc(editing.id).set(data);
+    req.catch(() => toast("Не сохранилось, проверь интернет"));
+  } else {
+    if (isNew) points.push({ id: "p" + Date.now(), ...data });
+    else Object.assign(editing, data);
+    saveLocalPoints();
+    onPointsChanged();
+  }
+
+  if (isNew) {
+    game.pointsAdded++;
+    saveData("gazyava_clicker", game);
+    checkAchievements();
+  }
+  closePointForm();
+  toast(isNew ? "Точка добавлена! Спасибо, картограф 🗺️" : "Точка обновлена 👍");
+}
+
+function deletePoint() {
+  if (!confirm(`Удалить точку «${editing.name}»?`)) return;
+  if (db) {
+    db.collection("points").doc(editing.id).delete().catch(() => toast("Не удалилось, проверь интернет"));
+  } else {
+    points = points.filter(p => p !== editing);
+    saveLocalPoints();
+    onPointsChanged();
+  }
+  closePointForm();
+}
+
+function saveLocalPoints() {
+  saveData("gazyava_points", points.map(p => ({ id: p.id, ...pointFields(p) })));
+}
+
+// кнопки окна точки
+document.getElementById("hasYes").onclick = () => { formHas = true; updateFormButtons(); };
+document.getElementById("hasNo").onclick = () => { formHas = false; updateFormButtons(); };
+document.getElementById("coldBtn").onclick = () => { formCold = true; updateFormButtons(); };
+document.getElementById("warmBtn").onclick = () => { formCold = false; updateFormButtons(); };
+document.getElementById("fSave").onclick = savePoint;
+document.getElementById("fCancel").onclick = closePointForm;
+document.getElementById("fRoute").onclick = () => openRoute(editing);
+document.getElementById("fDelete").onclick = deletePoint;
+
+// ===== Посещённые места («Был тут») =====
+// ключ места: у точки Family — её id, у магазина — координаты
+let visited = loadData("gazyava_visited", {});
+
+function placeKey(s) {
+  return s.id || s.lat.toFixed(5) + "," + s.lon.toFixed(5);
+}
+function visitedCount() {
+  return Object.keys(visited).length;
+}
+
+function visitPlace(s) {
+  const key = placeKey(s);
+  if (visited[key]) { toast("Ты тут уже был ✅"); return; }
+  // защита от читов: отметиться можно, только если реально стоишь рядом
+  if (!(s.dist <= VISIT_DISTANCE)) { toast(`Подойди ближе — нужно быть в ${VISIT_DISTANCE} м от точки`); return; }
+  visited[key] = Date.now();
+  saveData("gazyava_visited", visited);
+  addBubbles(VISIT_BONUS);
+  saveData("gazyava_clicker", game);
+  updateClicker();
+  toast(`✅ «${s.name}» посещён! +${VISIT_BONUS} 🫧 в кликер`);
+  updateList();
+  updateStats();
+}
+
+function updateStats() {
+  const near = points.filter(p => p.dist <= SEARCH_RADIUS).length;
+  document.getElementById("stats").textContent =
+    `✅ Посещено: ${visitedCount()} · 📌 Точек Family рядом: ${near}`;
+}
+
+// ===== Всплывающее сообщение =====
+let toastTimer = null;
+function toast(text) {
+  const el = document.getElementById("toast");
+  el.textContent = text;
+  el.style.display = "block";
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.style.display = "none"; }, 3000);
+}
+
 // ===== Помощники =====
 
 function resize() {
@@ -622,6 +989,15 @@ function loadData(key, byDefault) {
 }
 function saveData(key, value) {
   try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) {}
+}
+
+// сколько времени прошло: «5 мин назад»
+function ago(ms) {
+  const min = Math.round((Date.now() - ms) / 60000);
+  if (min < 1) return "только что";
+  if (min < 60) return min + " мин назад";
+  if (min < 1440) return Math.round(min / 60) + " ч назад";
+  return Math.round(min / 1440) + " дн назад";
 }
 
 // число с пробелами: 12345 -> «12 345»
@@ -689,6 +1065,39 @@ function bottleSVG(s, height) {
   </svg>`;
 }
 
+// ===== Газява дня =====
+const FORECASTS = [
+  "Сегодня пузырьки на твоей стороне",
+  "Холодная газява найдёт тебя сама",
+  "Опасайся тёплой газявы после обеда",
+  "Кто первым открыл бутылку — тот и прав",
+  "День для смелых вкусов",
+  "Магнит сегодня особенно близко ⭐",
+  "Встряхивать не рекомендуется. Но можно",
+  "Звёзды советуют взять две бутылки",
+];
+
+function dayNumber() {
+  const d = new Date();
+  return d.getFullYear() * 400 + d.getMonth() * 32 + d.getDate();
+}
+// «случайное» число от 0 до n-1, но одно и то же весь день и у всех друзей
+function dayRandom(salt, n) {
+  const x = Math.sin(dayNumber() * 97 + salt) * 10000;
+  return Math.floor((x - Math.floor(x)) * n);
+}
+function dailyIndex() {
+  return dayRandom(1, SODAS.length);
+}
+
+function renderDaily() {
+  const s = SODAS[dailyIndex()];
+  document.getElementById("daily").innerHTML = bottleSVG(s, 70) + `
+    <div class="txt">🔥 Газява дня: <b>${s.name}</b><br>
+      🔮 ${FORECASTS[dayRandom(2, FORECASTS.length)]}<br>
+      Выбери её — клики ×2 до полуночи!</div>`;
+}
+
 function renderCatalog() {
   document.getElementById("chosen").textContent = "Твоя газява: ⭐ " + SODAS[chosen].name;
   const box = document.getElementById("catalog");
@@ -697,6 +1106,7 @@ function renderCatalog() {
     const card = document.createElement("div");
     card.className = i === chosen ? "card selected" : "card";
     card.innerHTML = bottleSVG(s, 110) + `
+      ${i === dailyIndex() ? '<div class="badge">🔥 Газява дня</div>' : ""}
       <div class="name">${s.name}</div>
       <div class="taste">${s.taste}</div>
       <div class="desc">${s.desc}</div>
@@ -715,6 +1125,7 @@ function chooseSoda(i) {
   saveData("gazyava_chosen", chosen);
   renderCatalog();
   renderClickerBottle();
+  updateClicker();       // сила клика могла измениться (×2 за газяву дня)
 }
 
 // ===== Вкладка 3: Кликер =====
@@ -737,6 +1148,11 @@ const RANKS = [
 
 // состояние игры: сколько пузыриков сейчас, сколько всего, сколько куплено улучшений
 let game = loadData("gazyava_clicker", { bubbles: 0, total: 0, owned: {} });
+// новые поля — у старых сохранений их нет, заполняем нулями
+game.clicks = game.clicks || 0;             // сколько раз нажали на бутылку
+game.pointsAdded = game.pointsAdded || 0;   // сколько точек Family добавили
+game.bestCatch = game.bestCatch || 0;       // рекорд в «Поймай пузырь»
+game.ach = game.ach || {};                  // полученные достижения: {id: true}
 
 // каждое следующее улучшение дороже на 15%
 function upgradeCost(u) {
@@ -745,6 +1161,7 @@ function upgradeCost(u) {
 function clickPower() {
   let power = 1;
   for (const u of UPGRADES) power += u.click * (game.owned[u.id] || 0);
+  if (chosen === dailyIndex()) power *= 2;   // выбрана газява дня — клики ×2
   return power;
 }
 function autoPerSecond() {
@@ -790,7 +1207,8 @@ function buyUpgrade(u) {
 function updateClicker() {
   document.getElementById("bubblesCount").textContent = fmt(game.bubbles) + " 🫧";
   document.getElementById("rates").textContent =
-    `+${fmt(clickPower())} за клик · +${fmt(autoPerSecond())} в секунду`;
+    `+${fmt(clickPower())} за клик · +${fmt(autoPerSecond())} в секунду` +
+    (chosen === dailyIndex() ? " · 🔥×2" : "");
   let rank = RANKS[0][1];
   for (const [need, name] of RANKS) if (game.total >= need) rank = name;
   document.getElementById("rank").textContent = "🏅 " + rank;
@@ -803,12 +1221,14 @@ function updateClicker() {
     btn.querySelector(".cost").textContent = fmt(cost) + " 🫧";
     btn.disabled = game.bubbles < cost;
   }
+  checkAchievements();
 }
 
 // клик по бутылке
 document.getElementById("bigBottle").onclick = (e) => {
   const power = clickPower();
   addBubbles(power);
+  game.clicks++;
   spawnFloat(e, "+" + fmt(power));
   if (soundOn) { ensureAudio(); playOneBubble(audio.currentTime); }
   updateClicker();
@@ -857,11 +1277,134 @@ setInterval(() => {
 setInterval(() => saveData("gazyava_clicker", game), 2000);
 document.addEventListener("visibilitychange", () => saveData("gazyava_clicker", game));
 
+// ===== Достижения =====
+// check — функция, которая говорит, выполнено ли условие
+const ACHIEVEMENTS = [
+  { id: "first",   ico: "🫧", title: "Первый пузырь",       check: () => game.total >= 1 },
+  { id: "clicks",  ico: "👆", title: "100 кликов",          check: () => game.clicks >= 100 },
+  { id: "k1",      ico: "🥉", title: "1 000 пузырей",       check: () => game.total >= 1000 },
+  { id: "k100",    ico: "🥇", title: "100 000 пузырей",     check: () => game.total >= 100000 },
+  { id: "buy",     ico: "🛒", title: "Первая покупка",      check: () => Object.keys(game.owned).length > 0 },
+  { id: "factory", ico: "🏭", title: "Свой завод",          check: () => (game.owned.factory || 0) > 0 },
+  { id: "rocket",  ico: "🚀", title: "Газява в космосе",    check: () => (game.owned.rocket || 0) > 0 },
+  { id: "visit1",  ico: "🧭", title: "Разведчик: 1 точка",  check: () => visitedCount() >= 1 },
+  { id: "visit5",  ico: "🗺️", title: "Турист: 5 точек",     check: () => visitedCount() >= 5 },
+  { id: "mapper",  ico: "📌", title: "Картограф",           check: () => game.pointsAdded >= 1 },
+  { id: "catch30", ico: "🎯", title: "Ловкач: 30 пузырей",  check: () => game.bestCatch >= 30 },
+  { id: "daily",   ico: "🔥", title: "В тренде дня",        check: () => chosen === dailyIndex() },
+];
+
+function checkAchievements() {
+  const got = [];
+  for (const a of ACHIEVEMENTS) {
+    if (!game.ach[a.id] && a.check()) {
+      game.ach[a.id] = true;
+      got.push(a.ico + " " + a.title);
+    }
+  }
+  if (got.length) {
+    toast("🏆 Достижение: " + got.join(", "));
+    saveData("gazyava_clicker", game);
+    renderAchievements();
+  }
+}
+
+function renderAchievements() {
+  const box = document.getElementById("achList");
+  box.innerHTML = "";
+  for (const a of ACHIEVEMENTS) {
+    const el = document.createElement("div");
+    el.className = game.ach[a.id] ? "ach got" : "ach";
+    el.innerHTML = `<span class="ico">${a.ico}</span>${a.title}`;
+    box.appendChild(el);
+  }
+}
+
+// ===== Мини-игра «Поймай пузырь» =====
+const CATCH_TIME = 30;       // длительность игры, секунд
+const CATCH_REWARD = 10;     // пузырей в кликер за каждое очко
+
+let catchScore = 0, catchLeft = 0;
+let catchSpawn = null, catchTimer = null;   // таймеры: появление пузырей и обратный отсчёт
+let catchRunning = false;                   // идёт ли игра (чтобы награду не дали дважды)
+
+function startCatch() {
+  ensureAudio();
+  catchRunning = true;
+  catchScore = 0;
+  catchLeft = CATCH_TIME;
+  document.getElementById("catchField").innerHTML = "";
+  document.getElementById("catchEnd").style.display = "none";
+  document.getElementById("catchGame").style.display = "block";
+  updateCatchTop();
+  catchSpawn = setInterval(spawnCatchBubble, 450);
+  catchTimer = setInterval(() => {
+    catchLeft--;
+    updateCatchTop();
+    if (catchLeft <= 0) endCatch();
+  }, 1000);
+}
+
+function updateCatchTop() {
+  document.getElementById("catchTop").textContent = `⏱ ${catchLeft}   🫧 ${catchScore}`;
+}
+
+// новый пузырь внизу экрана; CSS-анимация сама поднимает его вверх
+function spawnCatchBubble() {
+  const field = document.getElementById("catchField");
+  const b = document.createElement("div");
+  const gold = Math.random() < 0.1;          // 10% — золотой пузырь, +5 очков
+  const size = 45 + Math.random() * 40;
+  b.className = gold ? "cb gold" : "cb";
+  b.style.width = b.style.height = size + "px";
+  b.style.left = Math.random() * (field.clientWidth - size) + "px";
+  b.style.animationDuration = (2.5 + Math.random() * 2) + "s";   // разная скорость
+  b.onpointerdown = () => {
+    catchScore += gold ? 5 : 1;
+    if (soundOn) playOneBubble(audio.currentTime);
+    b.remove();
+    updateCatchTop();
+  };
+  b.addEventListener("animationend", () => b.remove());   // улетел — не поймали
+  field.appendChild(b);
+}
+
+function endCatch() {
+  if (!catchRunning) {   // игра уже закончена — ✖ просто закрывает окно
+    document.getElementById("catchGame").style.display = "none";
+    return;
+  }
+  catchRunning = false;
+  clearInterval(catchSpawn);
+  clearInterval(catchTimer);
+  document.getElementById("catchField").innerHTML = "";
+  const reward = catchScore * CATCH_REWARD;
+  const isRecord = catchScore > game.bestCatch;
+  if (isRecord) game.bestCatch = catchScore;
+  addBubbles(reward);
+  saveData("gazyava_clicker", game);
+  updateClicker();
+  document.getElementById("catchResult").innerHTML =
+    `Поймано: <b>${catchScore}</b> 🫧<br>Рекорд: ${game.bestCatch}${isRecord ? " 🎉 НОВЫЙ!" : ""}<br>` +
+    `+${fmt(reward)} пузырей в кликер`;
+  document.getElementById("catchEnd").style.display = "flex";
+}
+
+document.getElementById("catchBtn").onclick = startCatch;
+document.getElementById("catchAgain").onclick = startCatch;
+document.getElementById("catchExit").onclick = endCatch;
+document.getElementById("catchClose").onclick = () => {
+  document.getElementById("catchGame").style.display = "none";
+};
+
 // ===== Запуск вкладок 2 и 3 =====
+renderDaily();
 renderCatalog();
 renderUpgrades();
 renderClickerBottle();
+renderAchievements();
 updateClicker();
+initPoints();
 </script>
 </body>
 </html>
