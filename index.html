@@ -60,7 +60,7 @@
     position: absolute; left: 0; right: 0; bottom: 0; height: 30%;
     overflow-y: auto; box-sizing: border-box;
     border-top: 1px solid #39ff1466;
-    padding: 4px 12px calc(env(safe-area-inset-bottom) + 4px);
+    padding: 4px 12px;
   }
   .shop {
     display: flex; justify-content: space-between; gap: 10px;
@@ -77,36 +77,152 @@
   }
   #start .logo { font-size: 64px; }
   #start p { max-width: 320px; opacity: 0.8; line-height: 1.4; }
-  #start button {
+  #start button, .green-btn {
     font: inherit; font-size: 20px; font-weight: bold;
     color: #000; background: #39ff14; border: none; border-radius: 12px;
     padding: 16px 28px; box-shadow: 0 0 20px #39ff14;
   }
+
+  /* ===== Вкладки ===== */
+  :root { --bar: calc(60px + env(safe-area-inset-bottom)); }
+  /* каждая вкладка занимает экран над панелью вкладок; видна только активная */
+  .tab { position: absolute; top: 0; left: 0; right: 0; bottom: var(--bar); display: none; }
+  .tab.active { display: block; }
+  #tabbar {
+    position: absolute; left: 0; right: 0; bottom: 0; height: var(--bar); z-index: 3000;
+    display: flex; background: #000; border-top: 1px solid #39ff1466;
+    padding-bottom: env(safe-area-inset-bottom); box-sizing: border-box;
+  }
+  #tabbar button {
+    flex: 1; background: none; border: none; color: #39ff1488;
+    font: inherit; font-size: 12px; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 2px;
+  }
+  #tabbar button .ico { font-size: 22px; }
+  #tabbar button.active { color: #39ff14; text-shadow: 0 0 6px #39ff14; }
+
+  /* заголовок для вкладок 2 и 3 */
+  .page-title {
+    text-align: center; padding: calc(env(safe-area-inset-top) + 10px) 8px 6px;
+  }
+  .scroll { position: absolute; inset: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+
+  /* ===== Вкладка «Ассортимент» ===== */
+  #chosen { text-align: center; font-size: 13px; opacity: 0.8; margin-bottom: 8px; }
+  #catalog {
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding: 0 12px 16px;
+  }
+  .card {
+    border: 1px solid #39ff1444; border-radius: 12px; padding: 10px 8px;
+    text-align: center; background: #0a1a0a;
+  }
+  .card.selected { border-color: #ffd400; box-shadow: 0 0 12px #ffd40088; }
+  .card .name { font-weight: bold; font-size: 15px; margin-top: 4px; color: #fff; }
+  .card .taste { font-size: 12px; opacity: 0.8; margin: 2px 0; }
+  .card .desc { font-size: 11px; opacity: 0.6; min-height: 42px; }
+  .card .fizz { font-size: 12px; margin: 4px 0; }
+  .card button {
+    font: inherit; font-size: 12px; margin-top: 4px; padding: 6px 10px;
+    border-radius: 8px; border: 1px solid #39ff14; background: none; color: #39ff14;
+  }
+  .card.selected .pick { background: #ffd400; border-color: #ffd400; color: #000; }
+
+  /* ===== Вкладка «Кликер» ===== */
+  #clicker { text-align: center; padding-bottom: 20px; }
+  #bubblesCount { font-size: 34px; font-weight: bold; color: #fff; text-shadow: 0 0 10px #39ff14; }
+  #rates { font-size: 13px; opacity: 0.8; }
+  #rank { font-size: 14px; color: #ffd400; margin-top: 4px; }
+  #bigBottle {
+    position: relative; display: inline-block; margin: 14px 0 6px;
+    background: none; border: none; padding: 0;
+    -webkit-tap-highlight-color: transparent; transition: transform 0.08s;
+  }
+  #bigBottle:active { transform: scale(0.92) rotate(-4deg); }
+  #bottleName { font-size: 13px; opacity: 0.7; }
+  /* всплывающее «+1» и пузырики после клика */
+  .float {
+    position: absolute; pointer-events: none; font-weight: bold; color: #fff;
+    text-shadow: 0 0 6px #39ff14; animation: floatUp 0.9s ease-out forwards;
+  }
+  .bubble {
+    position: absolute; pointer-events: none; border-radius: 50%;
+    border: 2px solid #aefcff; animation: floatUp 1.1s ease-out forwards;
+  }
+  @keyframes floatUp {
+    from { transform: translateY(0); opacity: 1; }
+    to   { transform: translateY(-120px); opacity: 0; }
+  }
+  #upgrades { max-width: 420px; margin: 14px auto 0; padding: 0 12px; text-align: left; }
+  .upgrade {
+    display: flex; align-items: center; gap: 10px; width: 100%; box-sizing: border-box;
+    margin-bottom: 8px; padding: 10px; border-radius: 10px;
+    border: 1px solid #39ff1466; background: #0a1a0a; color: #39ff14; font: inherit; text-align: left;
+  }
+  .upgrade:disabled { opacity: 0.4; }
+  .upgrade .ico { font-size: 26px; }
+  .upgrade .info { flex: 1; }
+  .upgrade .title { color: #fff; font-weight: bold; font-size: 14px; }
+  .upgrade .sub { font-size: 12px; opacity: 0.8; }
+  .upgrade .cost { font-size: 13px; white-space: nowrap; }
 </style>
 </head>
 <body>
 
-<div id="screen">
-  <div id="map"></div>
-  <canvas id="radar"></canvas>
-  <header>
+<!-- ===== Вкладка 1: Локатор ===== -->
+<div class="tab active" id="tab-radar">
+  <div id="screen">
+    <div id="map"></div>
+    <canvas id="radar"></canvas>
+    <header>
+      <h1>ЛОКАТОР ГАЗЯВЫ</h1>
+      <div id="status">Запуск...</div>
+      <div id="gps"></div>
+    </header>
+    <div id="buttons">
+      <button id="mapBtn" title="Вид карты">🗺️</button>
+      <button id="soundBtn" title="Звук">🔊</button>
+    </div>
+  </div>
+  <div id="list"></div>
+
+  <div id="start">
+    <div class="logo">🥤📡</div>
     <h1>ЛОКАТОР ГАЗЯВЫ</h1>
-    <div id="status">Запуск...</div>
-    <div id="gps"></div>
-  </header>
-  <div id="buttons">
-    <button id="mapBtn" title="Вид карты">🗺️</button>
-    <button id="soundBtn" title="Звук">🔊</button>
+    <p>Сканирует местность и находит, где водится газява.<br><br>
+       Разреши доступ к геопозиции и включи звук (переключатель сбоку не на беззвучном).</p>
+    <button id="startBtn">ВКЛЮЧИТЬ ЛОКАТОР</button>
   </div>
 </div>
-<div id="list"></div>
 
-<div id="start">
-  <div class="logo">🥤📡</div>
-  <h1>ЛОКАТОР ГАЗЯВЫ</h1>
-  <p>Сканирует местность и находит, где водится газява.<br><br>
-     Разреши доступ к геопозиции и включи звук (переключатель сбоку не на беззвучном).</p>
-  <button id="startBtn">ВКЛЮЧИТЬ ЛОКАТОР</button>
+<!-- ===== Вкладка 2: Ассортимент ===== -->
+<div class="tab" id="tab-shop">
+  <div class="scroll">
+    <div class="page-title"><h1>АССОРТИМЕНТ</h1></div>
+    <div id="chosen"></div>
+    <div id="catalog"></div>
+  </div>
+</div>
+
+<!-- ===== Вкладка 3: Кликер ===== -->
+<div class="tab" id="tab-clicker">
+  <div class="scroll">
+    <div class="page-title"><h1>КЛИКЕР ГАЗЯВЫ</h1></div>
+    <div id="clicker">
+      <div id="bubblesCount">0</div>
+      <div id="rates"></div>
+      <div id="rank"></div>
+      <button id="bigBottle"></button>
+      <div id="bottleName"></div>
+      <div id="upgrades"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Панель вкладок внизу ===== -->
+<div id="tabbar">
+  <button data-tab="tab-radar" class="active"><span class="ico">📡</span>Локатор</button>
+  <button data-tab="tab-shop"><span class="ico">🥤</span>Ассортимент</button>
+  <button data-tab="tab-clicker"><span class="ico">👆</span>Кликер</button>
 </div>
 
 <script>
@@ -139,9 +255,7 @@ document.getElementById("mapBtn").onclick = toggleMapStyle;
 document.getElementById("soundBtn").onclick = toggleSound;
 
 function start() {
-  // На айфоне звук разрешено включить только после нажатия кнопки
-  audio = new (window.AudioContext || window.webkitAudioContext)();
-  setupEcho();
+  ensureAudio();
   document.getElementById("start").style.display = "none";
 
   // Карта: двигать пальцем нельзя (центр всегда — мы), приближать можно
@@ -234,7 +348,7 @@ async function loadShops() {
     shops = shops.filter(s => s.dist <= SEARCH_RADIUS);
     updateList();
     setStatus(shops.length
-      ? `Газява обнаружена: ${shops.length} точек в радиусе ${SEARCH_RADIUS / 1000} км`
+      ? `«${SODAS[chosen].name}» обнаружен(а): ${shops.length} точек в радиусе ${SEARCH_RADIUS / 1000} км`
       : "Газявы поблизости нет... 😱");
   } catch (e) {
     setStatus("Радар барахлит (нет связи). Повторю через 15 секунд");
@@ -422,26 +536,39 @@ function playSonarPing() {
   osc.stop(t + 1.9);
 }
 
-// Бульканье: несколько коротких «блупов» — тон быстро идёт вверх, как у пузырька
+// Бульканье: несколько коротких «блупов» в случайные моменты
 function playBubbles() {
   const t0 = audio.currentTime;
   const count = 5 + Math.floor(Math.random() * 6);   // 5–10 пузырьков
   for (let i = 0; i < count; i++) {
-    const t = t0 + Math.random() * 0.7;
-    const f = 250 + Math.random() * 450;              // у каждого пузырька своя высота
-    const osc = audio.createOscillator();
-    const gain = audio.createGain();
-    osc.type = "sine";
-    osc.frequency.setValueAtTime(f, t);
-    osc.frequency.exponentialRampToValueAtTime(f * 2.5, t + 0.07);
-    gain.gain.setValueAtTime(0.0001, t);
-    gain.gain.exponentialRampToValueAtTime(0.3, t + 0.005);
-    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.09);
-    osc.connect(gain);
-    gain.connect(audio.destination);
-    osc.start(t);
-    osc.stop(t + 0.1);
+    playOneBubble(t0 + Math.random() * 0.7);
   }
+}
+
+// Один пузырёк «блуп»: тон быстро идёт вверх
+function playOneBubble(t) {
+  const f = 250 + Math.random() * 450;   // у каждого пузырька своя высота
+  const osc = audio.createOscillator();
+  const gain = audio.createGain();
+  osc.type = "sine";
+  osc.frequency.setValueAtTime(f, t);
+  osc.frequency.exponentialRampToValueAtTime(f * 2.5, t + 0.07);
+  gain.gain.setValueAtTime(0.0001, t);
+  gain.gain.exponentialRampToValueAtTime(0.3, t + 0.005);
+  gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.09);
+  osc.connect(gain);
+  gain.connect(audio.destination);
+  osc.start(t);
+  osc.stop(t + 0.1);
+}
+
+// Звук создаём один раз и только после нажатия (иначе айфон не даст играть)
+function ensureAudio() {
+  if (!audio) {
+    audio = new (window.AudioContext || window.webkitAudioContext)();
+    setupEcho();
+  }
+  if (audio.state === "suspended") audio.resume();
 }
 
 // ===== Кнопки =====
@@ -483,6 +610,258 @@ function distance(a, b) {
 function formatDist(m) {
   return m < 1000 ? `${Math.round(m)} м` : `${(m / 1000).toFixed(1)} км`;
 }
+
+// сохранение в памяти телефона (localStorage). try — на случай, если браузер запретил
+function loadData(key, byDefault) {
+  try {
+    const value = localStorage.getItem(key);
+    return value === null ? byDefault : JSON.parse(value);
+  } catch (e) {
+    return byDefault;
+  }
+}
+function saveData(key, value) {
+  try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) {}
+}
+
+// число с пробелами: 12345 -> «12 345»
+function fmt(n) {
+  return Math.floor(n).toLocaleString("ru-RU");
+}
+
+// ===== Вкладки =====
+
+document.querySelectorAll("#tabbar button").forEach(btn => {
+  btn.onclick = () => showTab(btn.dataset.tab);
+});
+
+function showTab(id) {
+  document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.id === id));
+  document.querySelectorAll("#tabbar button").forEach(b => b.classList.toggle("active", b.dataset.tab === id));
+  // пока карта была скрыта, она «потеряла» размер — пересчитываем
+  if (id === "tab-radar" && map) {
+    map.invalidateSize();
+    resize();
+    if (me) map.setView([me.lat, me.lon], map.getZoom(), { animate: false });
+  }
+}
+
+// ===== Вкладка 2: Ассортимент =====
+// liquid — цвет напитка, label — этикетка, cap — крышка, fizz — газированность 1..5
+
+const SODAS = [
+  { name: "Байкал", taste: "травы, эвкалипт, лакрица", desc: "Советская легенда. Пахнет лесом и детством.", liquid: "#3b1f0e", label: "#1f5fbf", cap: "#c0392b", fizz: 4 },
+  { name: "Тархун", taste: "эстрагон", desc: "Зелёный, как радар. Идеальная маскировка.", liquid: "#2ecc40", label: "#0b6623", cap: "#e0e0e0", fizz: 4 },
+  { name: "Буратино", taste: "лимон и карамель", desc: "Золотой ключик от хорошего настроения.", liquid: "#e8a317", label: "#d35400", cap: "#c0392b", fizz: 3 },
+  { name: "Дюшес", taste: "груша", desc: "Грушевый вкус, который помнят все бабушки.", liquid: "#f4d03f", label: "#27ae60", cap: "#f1c40f", fizz: 3 },
+  { name: "Крем-сода", taste: "ваниль и сливки", desc: "Как мороженое, только с пузырьками.", liquid: "#f9e79f", label: "#e91e63", cap: "#ffffff", fizz: 3 },
+  { name: "Лимонад", taste: "лимон и сахар", desc: "Классика из стеклянной бутылки.", liquid: "#fdf2c0", label: "#f1c40f", cap: "#27ae60", fizz: 3 },
+  { name: "Добрый Кола", taste: "кола", desc: "Главная кола на наших полках.", liquid: "#2a120a", label: "#d32f2f", cap: "#d32f2f", fizz: 4 },
+  { name: "Добрый Апельсин", taste: "апельсин", desc: "Оранжевое настроение по акции.", liquid: "#ff8c00", label: "#1565c0", cap: "#ff8c00", fizz: 4 },
+  { name: "Добрый Лимон-лайм", taste: "лимон и лайм", desc: "Прозрачный и освежающий.", liquid: "#e8f8e0", label: "#43a047", cap: "#43a047", fizz: 4 },
+  { name: "Coca-Cola", taste: "кола", desc: "Та самая. Импорт — ищи внимательно.", liquid: "#2a120a", label: "#e10600", cap: "#e10600", fizz: 5 },
+  { name: "Pepsi", taste: "кола", desc: "Вечный соперник из синей банды.", liquid: "#2a120a", label: "#004b93", cap: "#004b93", fizz: 4 },
+  { name: "Fanta", taste: "апельсин", desc: "Ярче, чем закат над Волгой.", liquid: "#ff7f00", label: "#1e40af", cap: "#1e40af", fizz: 4 },
+  { name: "Sprite", taste: "лимон и лайм", desc: "Не дай себе засохнуть!", liquid: "#e6f7ea", label: "#00843d", cap: "#00843d", fizz: 5 },
+  { name: "Mountain Dew", taste: "цитрус", desc: "Неоновый заряд бодрости.", liquid: "#b5e61d", label: "#0b3d0b", cap: "#0b3d0b", fizz: 5 },
+  { name: "Schweppes Tonic", taste: "горький хинин", desc: "Для тех, кто любит погорчее.", liquid: "#f0f8ff", label: "#f4c430", cap: "#f4c430", fizz: 5 },
+  { name: "Laimon Fresh", taste: "лимон, лайм, мята", desc: "Лимон и мята — свежесть в квадрате.", liquid: "#d4f5a8", label: "#1b5e20", cap: "#ffeb3b", fizz: 4 },
+  { name: "Боржоми", taste: "солёная минералка", desc: "Пей, пока не поздно.", liquid: "#dff3ff", label: "#1a237e", cap: "#1a237e", fizz: 4 },
+  { name: "Ессентуки №17", taste: "очень солёная", desc: "Только для настоящих ценителей.", liquid: "#dff3ff", label: "#0d47a1", cap: "#90caf9", fizz: 3 },
+  { name: "Нарзан", taste: "минеральная", desc: "Кавказская вода с характером.", liquid: "#e3f2fd", label: "#2e7d32", cap: "#2e7d32", fizz: 4 },
+  { name: "Святой Источник", taste: "просто вода с газом", desc: "Чистая газява без лишнего.", liquid: "#eaf6ff", label: "#29b6f6", cap: "#0288d1", fizz: 3 },
+];
+
+let chosen = loadData("gazyava_chosen", 0);   // номер выбранной газявы
+if (!(chosen >= 0 && chosen < SODAS.length)) chosen = 0;
+
+// Рисует бутылку в цветах газявы (SVG — картинка из кода)
+function bottleSVG(s, height) {
+  return `<svg viewBox="0 0 60 120" width="${height / 2}" height="${height}">
+    <rect x="23" y="1" width="14" height="8" rx="2" fill="${s.cap}"/>
+    <path d="M25 9 h10 v12 q0 5 6 10 q9 8 9 20 v58 q0 8 -8 8 h-24 q-8 0 -8 -8 v-58 q0 -12 9 -20 q6 -5 6 -10 z"
+          fill="${s.liquid}" stroke="rgba(255,255,255,0.5)" stroke-width="2"/>
+    <rect x="10" y="60" width="40" height="30" fill="${s.label}"/>
+    <path d="M16 38 q-3 20 -2 60" stroke="rgba(255,255,255,0.35)" stroke-width="3" fill="none"/>
+    <circle cx="22" cy="46" r="2.5" fill="rgba(255,255,255,0.6)"/>
+    <circle cx="38" cy="100" r="2" fill="rgba(255,255,255,0.6)"/>
+    <circle cx="28" cy="106" r="3" fill="rgba(255,255,255,0.5)"/>
+  </svg>`;
+}
+
+function renderCatalog() {
+  document.getElementById("chosen").textContent = "Твоя газява: ⭐ " + SODAS[chosen].name;
+  const box = document.getElementById("catalog");
+  box.innerHTML = "";
+  SODAS.forEach((s, i) => {
+    const card = document.createElement("div");
+    card.className = i === chosen ? "card selected" : "card";
+    card.innerHTML = bottleSVG(s, 110) + `
+      <div class="name">${s.name}</div>
+      <div class="taste">${s.taste}</div>
+      <div class="desc">${s.desc}</div>
+      <div class="fizz">${"🫧".repeat(s.fizz)}</div>
+      <button class="pick">${i === chosen ? "⭐ Выбрана" : "Выбрать"}</button>
+      <button class="go">👆 Кликать</button>`;
+    card.querySelector(".pick").onclick = () => chooseSoda(i);
+    // «Кликать» — выбираем газяву и сразу переходим на вкладку кликера
+    card.querySelector(".go").onclick = () => { chooseSoda(i); showTab("tab-clicker"); };
+    box.appendChild(card);
+  });
+}
+
+function chooseSoda(i) {
+  chosen = i;
+  saveData("gazyava_chosen", chosen);
+  renderCatalog();
+  renderClickerBottle();
+}
+
+// ===== Вкладка 3: Кликер =====
+// click — сколько добавляет к силе клика, auto — сколько пузыриков в секунду сам
+
+const UPGRADES = [
+  { id: "shake",   ico: "🤲", title: "Встряхнуть сильнее", sub: "+1 за клик",       cost: 15,    click: 1, auto: 0 },
+  { id: "ice",     ico: "🧊", title: "Лёд в стакан",       sub: "+1 в секунду",     cost: 50,    click: 0, auto: 1 },
+  { id: "straw",   ico: "🥤", title: "Трубочка",           sub: "+5 за клик",       cost: 250,   click: 5, auto: 0 },
+  { id: "kiosk",   ico: "🏪", title: "Ларёк с газявой",    sub: "+5 в секунду",     cost: 500,   click: 0, auto: 5 },
+  { id: "factory", ico: "🏭", title: "Завод газявы",       sub: "+30 в секунду",    cost: 4000,  click: 0, auto: 30 },
+  { id: "rocket",  ico: "🚀", title: "Газява в космосе",   sub: "+200 в секунду",   cost: 40000, click: 0, auto: 200 },
+];
+
+// звания по количеству всех собранных пузыриков
+const RANKS = [
+  [0, "Новичок газявы"], [100, "Любитель пузыриков"], [1000, "Газировщик"],
+  [10000, "Сомелье газявы"], [100000, "Газявный магнат"], [1000000, "Властелин газявы 👑"],
+];
+
+// состояние игры: сколько пузыриков сейчас, сколько всего, сколько куплено улучшений
+let game = loadData("gazyava_clicker", { bubbles: 0, total: 0, owned: {} });
+
+// каждое следующее улучшение дороже на 15%
+function upgradeCost(u) {
+  return Math.floor(u.cost * Math.pow(1.15, game.owned[u.id] || 0));
+}
+function clickPower() {
+  let power = 1;
+  for (const u of UPGRADES) power += u.click * (game.owned[u.id] || 0);
+  return power;
+}
+function autoPerSecond() {
+  let sum = 0;
+  for (const u of UPGRADES) sum += u.auto * (game.owned[u.id] || 0);
+  return sum;
+}
+function addBubbles(n) {
+  game.bubbles += n;
+  game.total += n;
+}
+
+function renderClickerBottle() {
+  document.getElementById("bigBottle").innerHTML = bottleSVG(SODAS[chosen], 220);
+  document.getElementById("bottleName").textContent = `Жми на «${SODAS[chosen].name}»!`;
+}
+
+// кнопки улучшений создаём один раз, потом только обновляем цифры
+function renderUpgrades() {
+  const box = document.getElementById("upgrades");
+  for (const u of UPGRADES) {
+    const btn = document.createElement("button");
+    btn.className = "upgrade";
+    btn.id = "up-" + u.id;
+    btn.innerHTML = `<span class="ico">${u.ico}</span>
+      <span class="info"><div class="title">${u.title}</div><div class="sub"></div></span>
+      <span class="cost"></span>`;
+    btn.onclick = () => buyUpgrade(u);
+    box.appendChild(btn);
+  }
+}
+
+function buyUpgrade(u) {
+  const cost = upgradeCost(u);
+  if (game.bubbles < cost) return;
+  game.bubbles -= cost;
+  game.owned[u.id] = (game.owned[u.id] || 0) + 1;
+  saveData("gazyava_clicker", game);
+  if (soundOn) { ensureAudio(); playBubbles(); }
+  updateClicker();
+}
+
+function updateClicker() {
+  document.getElementById("bubblesCount").textContent = fmt(game.bubbles) + " 🫧";
+  document.getElementById("rates").textContent =
+    `+${fmt(clickPower())} за клик · +${fmt(autoPerSecond())} в секунду`;
+  let rank = RANKS[0][1];
+  for (const [need, name] of RANKS) if (game.total >= need) rank = name;
+  document.getElementById("rank").textContent = "🏅 " + rank;
+
+  for (const u of UPGRADES) {
+    const btn = document.getElementById("up-" + u.id);
+    const count = game.owned[u.id] || 0;
+    const cost = upgradeCost(u);
+    btn.querySelector(".sub").textContent = u.sub + (count ? `  (есть: ${count})` : "");
+    btn.querySelector(".cost").textContent = fmt(cost) + " 🫧";
+    btn.disabled = game.bubbles < cost;
+  }
+}
+
+// клик по бутылке
+document.getElementById("bigBottle").onclick = (e) => {
+  const power = clickPower();
+  addBubbles(power);
+  spawnFloat(e, "+" + fmt(power));
+  if (soundOn) { ensureAudio(); playOneBubble(audio.currentTime); }
+  updateClicker();
+};
+
+// всплывающее «+N» и пузырики в месте нажатия
+function spawnFloat(e, text) {
+  const btn = document.getElementById("bigBottle");
+  const rect = btn.getBoundingClientRect();
+  const x = (e.clientX || rect.left + rect.width / 2) - rect.left;
+  const y = (e.clientY || rect.top + rect.height / 2) - rect.top;
+  const items = [];
+
+  const label = document.createElement("div");
+  label.className = "float";
+  label.textContent = text;
+  label.style.left = x + "px";
+  label.style.top = y + "px";
+  items.push(label);
+
+  for (let i = 0; i < 3; i++) {
+    const b = document.createElement("div");
+    const size = 6 + Math.random() * 10;
+    b.className = "bubble";
+    b.style.width = b.style.height = size + "px";
+    b.style.left = (x + (Math.random() - 0.5) * 60) + "px";
+    b.style.top = (y + (Math.random() - 0.5) * 20) + "px";
+    items.push(b);
+  }
+  for (const el of items) {
+    btn.appendChild(el);
+    setTimeout(() => el.remove(), 1200);   // убираем после анимации
+  }
+}
+
+// автоматические пузырики: 10 раз в секунду по 1/10 от «в секунду»
+setInterval(() => {
+  const perSecond = autoPerSecond();
+  if (perSecond > 0) {
+    addBubbles(perSecond / 10);
+    updateClicker();
+  }
+}, 100);
+
+// сохраняем игру каждые 2 секунды и когда приложение сворачивают
+setInterval(() => saveData("gazyava_clicker", game), 2000);
+document.addEventListener("visibilitychange", () => saveData("gazyava_clicker", game));
+
+// ===== Запуск вкладок 2 и 3 =====
+renderCatalog();
+renderUpgrades();
+renderClickerBottle();
+updateClicker();
 </script>
 </body>
 </html>
