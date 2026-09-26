@@ -30,8 +30,10 @@
   #map, #radar { position: absolute; inset: 0; width: 100%; height: 100%; }
   #radar { z-index: 500; pointer-events: none; }   /* радар рисуется поверх карты */
   .leaflet-container { background: #000; }
-  /* в режиме радара перекрашиваем тёмную карту в зелёный цвет */
-  #map.radar-style .leaflet-tile-pane { filter: sepia(1) hue-rotate(50deg) saturate(2) brightness(1.2); }
+  /* в режиме радара: светлую карту делаем тёмной (invert) и перекрашиваем в зелёный */
+  #map.radar-style .leaflet-tile-pane {
+    filter: invert(1) grayscale(1) sepia(1) hue-rotate(50deg) saturate(3) brightness(0.7);
+  }
 
   /* круглые кнопки слева внизу карты */
   #buttons {
@@ -123,7 +125,7 @@ let loading = false;
 let prevAngle = 0;       // угол луча на прошлом кадре
 
 // карта: два вида — обычный (улицы хорошо видно) и зелёный «радарный»
-let normalLayer, radarLayer, radarStyle = false;
+let radarStyle = false;
 let trail, accuracyCircle;   // след пройденного пути и круг точности GPS
 
 // звук
@@ -147,12 +149,10 @@ function start() {
     zoomControl: false, dragging: false,
     touchZoom: "center", scrollWheelZoom: "center", doubleClickZoom: "center",
   }).setView([53.195, 50.1], 16);   // пока нет координат — центр Самары
-  const attribution = "© OpenStreetMap, © CARTO";
-  normalLayer = L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
-    { attribution, maxZoom: 19 });
-  radarLayer = L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
-    { attribution, maxZoom: 19 });
-  normalLayer.addTo(map);
+  // карта OpenStreetMap — бесплатно и без ключа (радарный вид делается CSS-фильтром)
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: "© OpenStreetMap", maxZoom: 19,
+  }).addTo(map);
 
   // след пути и круг точности
   trail = L.polyline([], { color: "#39ff14", weight: 4, opacity: 0.8 }).addTo(map);
@@ -448,13 +448,7 @@ function playBubbles() {
 
 function toggleMapStyle() {
   radarStyle = !radarStyle;
-  if (radarStyle) {
-    map.removeLayer(normalLayer);
-    radarLayer.addTo(map);
-  } else {
-    map.removeLayer(radarLayer);
-    normalLayer.addTo(map);
-  }
+  // карта та же, меняется только CSS-класс с фильтром цвета
   document.getElementById("map").classList.toggle("radar-style", radarStyle);
 }
 
