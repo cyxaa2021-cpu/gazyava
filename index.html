@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Локатор Газявы</title>
+
+<!-- Чтобы на айфоне «На экран Домой» выглядело как настоящее приложение -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Газява">
+<meta name="theme-color" content="#000000">
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="icon" href="icon.png">
+<link rel="manifest" href="manifest.json">
+
+<!-- Leaflet — библиотека для карты -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+
+<style>
+  html, body {
+    margin: 0; height: 100%; overflow: hidden;
+    background: #000; color: #39ff14;
+    font-family: "Courier New", monospace;
+  }
+  /* верхние 70% экрана — карта с радаром */
+  #screen { position: absolute; top: 0; left: 0; right: 0; bottom: 30%; }
+  #map, #radar { position: absolute; inset: 0; width: 100%; height: 100%; }
+  #radar { z-index: 500; pointer-events: none; }   /* радар рисуется поверх карты */
+  .leaflet-container { background: #000; }
+  /* в режиме радара перекрашиваем тёмную карту в зелёный цвет */
+  #map.radar-style .leaflet-tile-pane { filter: sepia(1) hue-rotate(50deg) saturate(2) brightness(1.2); }
+
+  /* круглые кнопки слева внизу карты */
+  #buttons {
+    position: absolute; left: 10px; bottom: 10px; z-index: 700;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  #buttons button {
+    width: 46px; height: 46px; border-radius: 50%;
+    border: 1px solid #39ff14; background: #000c; font-size: 22px;
+  }
+
+  header {
+    position: absolute; top: 0; left: 0; right: 0; z-index: 600;
+    text-align: center;
+    padding: calc(env(safe-area-inset-top) + 8px) 8px 16px;
+    background: linear-gradient(#000e, #0000);
+  }
+  h1 { margin: 0; font-size: 22px; letter-spacing: 3px; text-shadow: 0 0 8px #39ff14; }
+  #status { font-size: 13px; opacity: 0.85; margin-top: 4px; }
+  #gps { font-size: 11px; opacity: 0.6; margin-top: 2px; }
+
+  /* нижние 30% — список ближайших точек */
+  #list {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 30%;
+    overflow-y: auto; box-sizing: border-box;
+    border-top: 1px solid #39ff1466;
+    padding: 4px 12px calc(env(safe-area-inset-bottom) + 4px);
+  }
+  .shop {
+    display: flex; justify-content: space-between; gap: 10px;
+    padding: 8px 0; border-bottom: 1px solid #39ff1422;
+    color: #39ff14; text-decoration: none; font-size: 15px;
+  }
+  .shop.star { color: #ffd400; }
+
+  /* стартовый экран с кнопкой */
+  #start {
+    position: absolute; inset: 0; z-index: 2000; background: #000;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 18px; text-align: center; padding: 20px;
+  }
+  #start .logo { font-size: 64px; }
+  #start p { max-width: 320px; opacity: 0.8; line-height: 1.4; }
+  #start button {
+    font: inherit; font-size: 20px; font-weight: bold;
+    color: #000; background: #39ff14; border: none; border-radius: 12px;
+    padding: 16px 28px; box-shadow: 0 0 20px #39ff14;
+  }
+</style>
+</head>
+<body>
+
+<div id="screen">
+  <div id="map"></div>
+  <canvas id="radar"></canvas>
+  <header>
+    <h1>ЛОКАТОР ГАЗЯВЫ</h1>
+    <div id="status">Запуск...</div>
+    <div id="gps"></div>
+  </header>
+  <div id="buttons">
+    <button id="mapBtn" title="Вид карты">🗺️</button>
+    <button id="soundBtn" title="Звук">🔊</button>
+  </div>
+</div>
+<div id="list"></div>
+
+<div id="start">
+  <div class="logo">🥤📡</div>
+  <h1>ЛОКАТОР ГАЗЯВЫ</h1>
+  <p>Сканирует местность и находит, где водится газява.<br><br>
+     Разреши доступ к геопозиции и включи звук (переключатель сбоку не на беззвучном).</p>
+  <button id="startBtn">ВКЛЮЧИТЬ ЛОКАТОР</button>
+</div>
+
+<script>
+// ===== Настройки =====
+const SEARCH_RADIUS = 1500;   // в каком радиусе ищем магазины, метров
+const REFRESH_DISTANCE = 300; // если отошли дальше — ищем магазины заново, метров
+const SWEEP_TIME = 4000;      // один оборот луча радара, мс
+const GREEN = "57,255,20";    // цвет радара (r,g,b)
+const GOLD = "255,212,0";     // цвет для «Магнита»
+
+let map, canvas, ctx;
+let me = null;           // где сейчас телефон: {lat, lon, heading}
+let lastLoadPos = null;  // где последний раз искали магазины
+let shops = [];          // найденные магазины: {name, lat, lon, dist, star, hit}
+let loading = false;
+let prevAngle = 0;       // угол луча на прошлом кадре
+
+// карта: два вида — обычный (улицы хорошо видно) и зелёный «радарный»
+let normalLayer, radarLayer, radarStyle = false;
+let trail, accuracyCircle;   // след пройденного пути и круг точности GPS
+
+// звук
+let audio = null, echo = null;
+let soundOn = true;
+let lastBubbles = 0;     // когда последний раз булькали (чтобы не было каши из звуков)
+let pingedThisTurn = false;
+
+document.getElementById("startBtn").onclick = start;
+document.getElementById("mapBtn").onclick = toggleMapStyle;
+document.getElementById("soundBtn").onclick = toggleSound;
+
+function start() {
+  // На айфоне звук разрешено включить только после нажатия кнопки
+  audio = new (window.AudioContext || window.webkitAudioContext)();
+  setupEcho();
+  document.getElementById("start").style.display = "none";
+
+  // Карта: двигать пальцем нельзя (центр всегда — мы), приближать можно
+  map = L.map("map", {
+    zoomControl: false, dragging: false,
+    touchZoom: "center", scrollWheelZoom: "center", doubleClickZoom: "center",
+  }).setView([53.195, 50.1], 16);   // пока нет координат — центр Самары
+  const attribution = "© OpenStreetMap, © CARTO";
+  normalLayer = L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
+    { attribution, maxZoom: 19 });
+  radarLayer = L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+    { attribution, maxZoom: 19 });
+  normalLayer.addTo(map);
+
+  // след пути и круг точности
+  trail = L.polyline([], { color: "#39ff14", weight: 4, opacity: 0.8 }).addTo(map);
+  accuracyCircle = L.circle([0, 0], { radius: 0, color: "#39ff14", weight: 1, fillOpacity: 0.08 }).addTo(map);
+
+  canvas = document.getElementById("radar");
+  ctx = canvas.getContext("2d");
+  resize();
+  window.addEventListener("resize", resize);
+
+  if (!navigator.geolocation) {
+    setStatus("Телефон не умеет определять местоположение 😢");
+  } else {
+    setStatus("Ищу спутники...");
+    // watchPosition вызывает onPosition каждый раз, когда телефон сдвинулся
+    navigator.geolocation.watchPosition(onPosition, onGeoError,
+      { enableHighAccuracy: true, maximumAge: 5000 });
+  }
+  requestAnimationFrame(draw);
+}
+
+// ===== Геопозиция =====
+
+function onPosition(pos) {
+  const c = pos.coords;
+  const old = me;
+  me = { lat: c.latitude, lon: c.longitude, heading: old ? old.heading : null };
+  // направление движения телефон сообщает, только когда мы идём
+  if (c.heading !== null && !isNaN(c.heading) && c.speed > 0.5) me.heading = c.heading;
+
+  map.setView([me.lat, me.lon], map.getZoom(), { animate: false });
+
+  // добавляем точку в след, если сдвинулись хотя бы на 3 метра
+  if (!old || distance(old, me) > 3) trail.addLatLng([me.lat, me.lon]);
+  accuracyCircle.setLatLng([me.lat, me.lon]).setRadius(c.accuracy);
+  document.getElementById("gps").textContent =
+    `📍 ${me.lat.toFixed(5)}, ${me.lon.toFixed(5)}  точность ±${Math.round(c.accuracy)} м`;
+
+  for (const s of shops) s.dist = distance(me, s);
+  updateList();
+  // первый раз или ушли далеко — ищем магазины заново
+  if (!lastLoadPos || distance(me, lastLoadPos) > REFRESH_DISTANCE) loadShops();
+}
+
+function onGeoError(err) {
+  if (err.code === 1) setStatus("Нет доступа к геопозиции. Разреши его в настройках Safari");
+  else setStatus("Не могу поймать сигнал, пробую ещё...");
+}
+
+// ===== Поиск магазинов через Nominatim (OpenStreetMap, бесплатно, без ключа) =====
+
+async function loadShops() {
+  if (loading) return;
+  loading = true;
+  lastLoadPos = { ...me };
+  setStatus("Сканирую местность...");
+
+  // квадрат вокруг нас: сколько градусов в SEARCH_RADIUS метрах
+  const dLat = SEARCH_RADIUS / 111320;
+  const dLon = SEARCH_RADIUS / (111320 * Math.cos(me.lat * Math.PI / 180));
+  const viewbox = [me.lon - dLon, me.lat + dLat, me.lon + dLon, me.lat - dLat].join(",");
+  const url = "https://nominatim.openstreetmap.org/search?format=jsonv2&limit=50&bounded=1"
+            + "&accept-language=ru&q=supermarket&viewbox=" + viewbox;
+  try {
+    const resp = await fetch(url);
+    const data = await resp.json();
+    shops = data.map(el => {
+      const name = el.name || "Магазинчик";
+      return {
+        name: name,
+        lat: Number(el.lat),            // координаты приходят строками
+        lon: Number(el.lon),
+        star: /магнит/i.test(name),     // «Магнит» подсвечиваем золотым
+        hit: 0,                         // когда луч последний раз прошёл над магазином
+      };
+    });
+    for (const s of shops) s.dist = distance(me, s);
+    // квадрат шире круга — отбрасываем то, что дальше радиуса
+    shops = shops.filter(s => s.dist <= SEARCH_RADIUS);
+    updateList();
+    setStatus(shops.length
+      ? `Газява обнаружена: ${shops.length} точек в радиусе ${SEARCH_RADIUS / 1000} км`
+      : "Газявы поблизости нет... 😱");
+  } catch (e) {
+    setStatus("Радар барахлит (нет связи). Повторю через 15 секунд");
+    setTimeout(() => { lastLoadPos = null; }, 15000);
+  }
+  loading = false;
+}
+
+// ===== Список ближайших точек =====
+
+function updateList() {
+  shops.sort((a, b) => a.dist - b.dist);
+  const list = document.getElementById("list");
+  list.innerHTML = "";
+  for (const s of shops.slice(0, 10)) {
+    const row = document.createElement("a");
+    row.className = s.star ? "shop star" : "shop";
+    // по нажатию — пеший маршрут в Яндекс Картах
+    row.href = `https://yandex.ru/maps/?rtext=~${s.lat},${s.lon}&rtt=pd`;
+    row.target = "_blank";
+    const name = document.createElement("span");
+    name.textContent = (s.star ? "⭐ " : "🥤 ") + s.name;
+    const dist = document.createElement("span");
+    dist.textContent = formatDist(s.dist);
+    row.append(name, dist);
+    list.appendChild(row);
+  }
+}
+
+// ===== Рисование радара (60 раз в секунду) =====
+
+function draw(time) {
+  requestAnimationFrame(draw);
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  ctx.clearRect(0, 0, w, h);
+
+  // центр радара — наша точка на карте (или центр экрана, пока координат нет)
+  const c = me ? map.latLngToContainerPoint([me.lat, me.lon]) : { x: w / 2, y: h / 2 };
+  const R = Math.min(w, h) / 2 * 0.9;                             // радиус радара в пикселях
+  const angle = (time % SWEEP_TIME) / SWEEP_TIME * Math.PI * 2;   // куда смотрит луч
+
+  // кольца и перекрестие
+  ctx.strokeStyle = `rgba(${GREEN},0.35)`;
+  ctx.lineWidth = 1;
+  ctx.fillStyle = `rgba(${GREEN},0.7)`;
+  ctx.font = "11px Courier New";
+  const radiusMeters = map.distance(map.containerPointToLatLng([c.x, c.y]),
+                                    map.containerPointToLatLng([c.x + R, c.y]));
+  for (let i = 1; i <= 3; i++) {
+    ctx.beginPath();
+    ctx.arc(c.x, c.y, R * i / 3, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.fillText(formatDist(radiusMeters * i / 3), c.x + 4, c.y - R * i / 3 + 12);
+  }
+  ctx.beginPath();
+  ctx.moveTo(c.x - R, c.y); ctx.lineTo(c.x + R, c.y);
+  ctx.moveTo(c.x, c.y - R); ctx.lineTo(c.x, c.y + R);
+  ctx.stroke();
+
+  // «хвост» за лучом: несколько секторов, каждый прозрачнее предыдущего
+  const TRAIL = 0.7, STEPS = 20;
+  for (let i = 0; i < STEPS; i++) {
+    ctx.fillStyle = `rgba(${GREEN},${0.25 * (1 - i / STEPS)})`;
+    ctx.beginPath();
+    ctx.moveTo(c.x, c.y);
+    ctx.arc(c.x, c.y, R, angle - TRAIL * (i + 1) / STEPS, angle - TRAIL * i / STEPS);
+    ctx.closePath();
+    ctx.fill();
+  }
+  // сам луч
+  ctx.strokeStyle = `rgba(${GREEN},1)`;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(c.x, c.y);
+  ctx.lineTo(c.x + R * Math.cos(angle), c.y + R * Math.sin(angle));
+  ctx.stroke();
+
+  // новый оборот луча — снова можно сыграть «пинг» подлодки
+  if (angle < prevAngle) pingedThisTurn = false;
+
+  // магазины: вспыхивают, когда луч проходит над ними, и потом гаснут
+  let beep = false;
+  for (const s of shops) {
+    const p = map.latLngToContainerPoint([s.lat, s.lon]);
+    const dx = p.x - c.x, dy = p.y - c.y;
+    if (Math.hypot(dx, dy) > R) continue;           // за краем радара — не видно
+    let a = Math.atan2(dy, dx);
+    if (a < 0) a += Math.PI * 2;
+    if (beamPassed(prevAngle, angle, a)) { s.hit = time; beep = true; }
+
+    const age = (time - s.hit) / SWEEP_TIME;         // 0 — только что, 1 — оборот назад
+    if (s.hit && age < 1) {
+      const alpha = 1 - age;
+      const color = s.star ? GOLD : GREEN;
+      ctx.fillStyle = `rgba(${color},${alpha})`;
+      ctx.shadowColor = `rgb(${color})`;
+      ctx.shadowBlur = 15 * alpha;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, s.star ? 8 : 6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.font = "12px Courier New";
+      ctx.fillText(s.name, p.x + 10, p.y + 4);
+    }
+  }
+  if (beep) onGazyavaFound(time);
+  prevAngle = angle;
+
+  // мы — пульсирующая точка в центре
+  if (me) {
+    const pulse = 5 + 3 * Math.sin(time / 200);
+    ctx.fillStyle = "#fff";
+    ctx.strokeStyle = "#000";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(c.x, c.y, pulse, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    // стрелка — куда идём (heading: 0 = север, по часовой)
+    if (me.heading !== null) {
+      const h = (me.heading - 90) * Math.PI / 180;   // переводим в угол холста (0 = восток)
+      ctx.fillStyle = "#39ff14";
+      ctx.beginPath();
+      ctx.moveTo(c.x + 22 * Math.cos(h), c.y + 22 * Math.sin(h));        // кончик
+      ctx.lineTo(c.x + 10 * Math.cos(h + 2.5), c.y + 10 * Math.sin(h + 2.5));
+      ctx.lineTo(c.x + 10 * Math.cos(h - 2.5), c.y + 10 * Math.sin(h - 2.5));
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+    }
+  }
+}
+
+// прошёл ли луч над углом a между прошлым и текущим кадром
+function beamPassed(prev, cur, a) {
+  if (prev <= cur) return a > prev && a <= cur;
+  return a > prev || a <= cur;   // луч перешёл через 0 (новый оборот)
+}
+
+// ===== Звуки подводной лодки (синтезируются кодом, без файлов) =====
+
+// Луч прошёл над газявой: «пинг» гидролокатора (раз за оборот) + бульканье
+function onGazyavaFound(time) {
+  if (!soundOn || !audio) return;
+  if (!pingedThisTurn) {
+    playSonarPing();
+    pingedThisTurn = true;
+  }
+  if (time - lastBubbles > 400) {
+    playBubbles();
+    lastBubbles = time;
+  }
+}
+
+// Эхо: звук повторяется всё тише, как под водой.
+// Создаём один раз: вход echo -> динамики и echo -> задержка -> (петля) -> динамики
+function setupEcho() {
+  echo = audio.createGain();
+  const delay = audio.createDelay();
+  delay.delayTime.value = 0.35;       // эхо через 0.35 с
+  const feedback = audio.createGain();
+  feedback.gain.value = 0.4;          // каждое следующее эхо на 60% тише
+  echo.connect(audio.destination);
+  echo.connect(delay);
+  delay.connect(feedback);
+  feedback.connect(delay);
+  delay.connect(audio.destination);
+}
+
+// «Пиннннг» сонара: чистый тон, резкое начало, долгое затухание
+function playSonarPing() {
+  const t = audio.currentTime;
+  const osc = audio.createOscillator();
+  const gain = audio.createGain();
+  osc.type = "sine";
+  osc.frequency.setValueAtTime(1200, t);
+  osc.frequency.exponentialRampToValueAtTime(1100, t + 1.5);   // тон чуть «плывёт» вниз
+  gain.gain.setValueAtTime(0.0001, t);
+  gain.gain.exponentialRampToValueAtTime(0.35, t + 0.01);
+  gain.gain.exponentialRampToValueAtTime(0.0001, t + 1.8);
+  osc.connect(gain);
+  gain.connect(echo);
+  osc.start(t);
+  osc.stop(t + 1.9);
+}
+
+// Бульканье: несколько коротких «блупов» — тон быстро идёт вверх, как у пузырька
+function playBubbles() {
+  const t0 = audio.currentTime;
+  const count = 5 + Math.floor(Math.random() * 6);   // 5–10 пузырьков
+  for (let i = 0; i < count; i++) {
+    const t = t0 + Math.random() * 0.7;
+    const f = 250 + Math.random() * 450;              // у каждого пузырька своя высота
+    const osc = audio.createOscillator();
+    const gain = audio.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(f, t);
+    osc.frequency.exponentialRampToValueAtTime(f * 2.5, t + 0.07);
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.exponentialRampToValueAtTime(0.3, t + 0.005);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.09);
+    osc.connect(gain);
+    gain.connect(audio.destination);
+    osc.start(t);
+    osc.stop(t + 0.1);
+  }
+}
+
+// ===== Кнопки =====
+
+function toggleMapStyle() {
+  radarStyle = !radarStyle;
+  if (radarStyle) {
+    map.removeLayer(normalLayer);
+    radarLayer.addTo(map);
+  } else {
+    map.removeLayer(radarLayer);
+    normalLayer.addTo(map);
+  }
+  document.getElementById("map").classList.toggle("radar-style", radarStyle);
+}
+
+function toggleSound() {
+  soundOn = !soundOn;
+  document.getElementById("soundBtn").textContent = soundOn ? "🔊" : "🔇";
+}
+
+// ===== Помощники =====
+
+function resize() {
+  // учитываем плотность пикселей, чтобы на айфоне не было мыла
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = canvas.clientWidth * dpr;
+  canvas.height = canvas.clientHeight * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+function setStatus(text) {
+  document.getElementById("status").textContent = text;
+}
+
+// расстояние между двумя точками на Земле в метрах (формула гаверсинусов)
+function distance(a, b) {
+  const R = 6371000, rad = Math.PI / 180;
+  const dLat = (b.lat - a.lat) * rad, dLon = (b.lon - a.lon) * rad;
+  const x = Math.sin(dLat / 2) ** 2 +
+            Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(x));
+}
+
+function formatDist(m) {
+  return m < 1000 ? `${Math.round(m)} м` : `${(m / 1000).toFixed(1)} км`;
+}
+</script>
+</body>
+</html>
