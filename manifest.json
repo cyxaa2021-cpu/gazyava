@@ -1,11 +1,11 @@
 {
-  "name": "Локатор Газявы",
+  "name": "Газява",
   "short_name": "Газява",
   "start_url": ".",
   "display": "standalone",
   "background_color": "#000000",
   "theme_color": "#000000",
   "icons": [
-    { "src": "icon.png", "sizes": "512x512", "type": "image/png" }
+    { "src": "images/icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
   ]
 }
