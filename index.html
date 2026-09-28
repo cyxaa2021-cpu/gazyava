@@ -187,6 +187,7 @@
   #bubblesCount { font-size: 34px; font-weight: bold; color: #fff; text-shadow: 0 0 10px #39ff14; }
   #rates { font-size: 13px; opacity: 0.8; }
   #rank { font-size: 14px; color: #ffd400; margin-top: 4px; }
+  #myId { font-size: 12px; opacity: 0.6; margin-top: 4px; user-select: text; -webkit-user-select: text; }
   #bigBottle {
     position: relative; display: inline-block; margin: 14px 0 6px;
     background: none; border: none; padding: 0;
@@ -371,11 +372,12 @@
 <!-- ===== Вкладка 3: Кликер ===== -->
 <div class="tab" id="tab-clicker">
   <div class="scroll">
-    <div class="page-title"><h1>КЛИКЕР ГАЗЯВЫ</h1></div>
+    <div class="page-title" id="clickerTitle"><h1>КЛИКЕР ГАЗЯВЫ</h1></div>
     <div id="clicker">
       <div id="bubblesCount">0</div>
       <div id="rates"></div>
       <div id="rank"></div>
+      <div id="myId"></div>
       <button id="bigBottle"></button>
       <div id="bottleName"></div>
       <div id="upgrades"></div>
@@ -466,6 +468,26 @@
       <button id="fCancel">Отмена</button>
       <button id="fRoute">🚶 Маршрут</button>
       <button class="danger" id="fDelete">🗑 Удалить</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Админка (открывается 5 быстрыми нажатиями на заголовок кликера) ===== -->
+<div class="overlay" id="adminPanel">
+  <div class="panel">
+    <h2>👮 Админка</h2>
+    <div class="info">Выдать или забрать пузыри у игрока по его ID</div>
+    <label>ID игрока</label>
+    <input id="aId" maxlength="6" placeholder="K7F2QX" autocapitalize="characters" autocomplete="off">
+    <label>Сколько пузырей</label>
+    <input id="aAmount" type="number" inputmode="numeric" placeholder="1000">
+    <label>Пароль админа</label>
+    <input id="aPass" type="password" autocomplete="off">
+    <div class="btns">
+      <button class="main" id="aGive">➕ Выдать</button>
+      <button class="danger" id="aTake">➖ Забрать</button>
+      <button id="aMe">🙋 Мой ID</button>
+      <button id="aClose">Закрыть</button>
     </div>
   </div>
 </div>
@@ -909,6 +931,7 @@ function initPoints() {
       points = snap.docs.map(doc => ({ ...doc.data(), id: doc.id }));
       onPointsChanged();
     }, () => toast("Не могу загрузить точки Газява Family 😢"));
+    listenGrants();   // выдачи пузырей от админа
   } else {
     points = loadData("gazyava_points", []);
     onPointsChanged();
@@ -1873,6 +1896,87 @@ function doUpgrade() {
 }
 
 document.getElementById("upGo").onclick = doUpgrade;
+
+// ===== ID игрока и админка =====
+// ID — 6 случайных символов, создаётся один раз и хранится в телефоне.
+// Друг сообщает тебе свой ID, ты выдаёшь или забираешь пузыри через админку.
+const ID_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";   // без 0/O и 1/I, чтобы не путать
+let playerId = loadData("gazyava_id", null);
+if (!playerId) {
+  playerId = "";
+  for (let i = 0; i < 6; i++) playerId += ID_CHARS[Math.floor(Math.random() * ID_CHARS.length)];
+  saveData("gazyava_id", playerId);
+}
+document.getElementById("myId").textContent = "🆔 Твой ID: " + playerId;
+
+// Выдачи лежат в Firestore, коллекция grants: {pid: ID игрока, amount: сколько (минус — забрать), t: время}.
+// Телефон игрока следит за своими выдачами, начисляет их и удаляет из базы.
+function listenGrants() {
+  // includeMetadataChanges — чтобы узнать, когда сервер подтвердил запись
+  db.collection("grants").where("pid", "==", playerId).onSnapshot({ includeMetadataChanges: true }, snap => {
+    if (snap.metadata.hasPendingWrites) return;   // запись ещё не подтверждена сервером — ждём
+    const done = loadData("gazyava_grants_done", []);   // id уже начисленных выдач (защита от двойного начисления)
+    for (const doc of snap.docs) {
+      if (!done.includes(doc.id)) {
+        done.push(doc.id);
+        applyGrant(doc.data().amount);
+      }
+      doc.ref.delete().catch(() => {});
+    }
+    saveData("gazyava_grants_done", done.slice(-50));   // помним только последние 50
+  }, () => {});
+}
+
+function applyGrant(amount) {
+  game.bubbles = Math.max(0, game.bubbles + amount);   // забрать больше, чем есть, нельзя — останется 0
+  saveData("gazyava_clicker", game);
+  updateClicker();
+  toast(amount >= 0 ? `🎁 Админ выдал тебе +${fmt(amount)} 🫧` : `👮 Админ забрал у тебя ${fmt(-amount)} 🫧`);
+}
+
+// Секретный вход: 5 нажатий на заголовок кликера за 2 секунды
+let titleTaps = [];
+document.getElementById("clickerTitle").onclick = () => {
+  const now = Date.now();
+  titleTaps = titleTaps.filter(t => now - t < 2000);
+  titleTaps.push(now);
+  if (titleTaps.length >= 5) {
+    titleTaps = [];
+    document.getElementById("aPass").value = loadData("gazyava_admin_pass", "");
+    document.getElementById("adminPanel").classList.add("show");
+  }
+};
+
+// Как проверяется пароль: вместе с выдачей пишем документ proofs/<пароль>.
+// Правила Firestore разрешают такую запись, только если пароль верный (он есть только в правилах, не в коде).
+// Обе записи идут одним пакетом (batch): если пароль неверный, не сохранится ничего.
+async function adminSend(sign) {
+  const pid = document.getElementById("aId").value.trim().toUpperCase();
+  const amount = Math.round(Number(document.getElementById("aAmount").value));
+  const pass = document.getElementById("aPass").value.trim();
+  if (!db) { toast("Админка работает только с Firebase"); return; }
+  if (pid.length !== 6) { toast("ID игрока — 6 символов"); return; }
+  if (!(amount > 0)) { toast("Введи количество больше нуля"); return; }
+  if (!pass || pass.includes("/")) { toast("Введи пароль админа"); return; }
+
+  const now = firebase.firestore.FieldValue.serverTimestamp();   // время ставит сервер, подделать нельзя
+  const batch = db.batch();
+  batch.set(db.collection("proofs").doc(pass), { t: now });
+  batch.set(db.collection("grants").doc(), { pid: pid, amount: sign * amount, t: now });
+  toast("Отправляю...");
+  try {
+    await batch.commit();
+    saveData("gazyava_admin_pass", pass);   // запоминаем пароль на этом телефоне
+    toast(sign > 0 ? `✅ Выдано ${fmt(amount)} 🫧 игроку ${pid}` : `✅ Забрано ${fmt(amount)} 🫧 у игрока ${pid}`);
+  } catch (e) {
+    toast("❌ Неверный пароль (или нет интернета)");
+  }
+}
+
+document.getElementById("aGive").onclick = () => adminSend(1);
+document.getElementById("aTake").onclick = () => adminSend(-1);
+document.getElementById("aMe").onclick = () => { document.getElementById("aId").value = playerId; };
+document.getElementById("aClose").onclick = () => document.getElementById("adminPanel").classList.remove("show");
 
 // ===== Запуск вкладок 2, 3 и 4 =====
 renderDaily();
