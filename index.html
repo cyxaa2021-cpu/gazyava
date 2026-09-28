@@ -255,6 +255,77 @@
     flex-direction: column; align-items: center; justify-content: center; gap: 14px; text-align: center;
   }
   #catchResult { font-size: 18px; line-height: 1.6; color: #fff; }
+
+  /* ===== Вкладка «Кейсы» ===== */
+  #cases { max-width: 420px; margin: 0 auto; padding: 0 12px 20px; }
+  #casesBalance { text-align: center; font-size: 26px; font-weight: bold; color: #fff; text-shadow: 0 0 10px #39ff14; }
+  #chances { text-align: center; font-size: 11px; margin: 8px 0 0; line-height: 1.5; }
+  #caseList { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
+  .case {
+    border: 2px solid #39ff14; border-radius: 12px; padding: 10px 4px; background: #0a1a0a;
+    color: #fff; font: inherit; text-align: center;
+  }
+  .case .ico { font-size: 40px; display: block; }
+  .case .cnm { font-size: 13px; font-weight: bold; }
+  .case .price { font-size: 12px; color: #39ff14; margin-top: 4px; }
+  .case:disabled { opacity: 0.4; }
+  .green-btn:disabled { opacity: 0.4; box-shadow: none; }
+
+  /* предмет: снизу полоска цвета редкости */
+  .item {
+    border: 1px solid #ffffff22; border-bottom: 4px solid #888; border-radius: 10px;
+    padding: 6px 4px; background: #0d0d0d; text-align: center; box-sizing: border-box;
+  }
+  .item.picked { border-color: #39ff14; box-shadow: 0 0 12px #39ff14; }
+  .inm { font-size: 12px; color: #fff; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rar { font-size: 10px; }
+  .val { font-size: 11px; color: #39ff14; }
+  .ibtns { display: flex; gap: 4px; justify-content: center; margin-top: 4px; }
+  #inv { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .empty { grid-column: 1 / -1; text-align: center; font-size: 12px; opacity: 0.6; padding: 10px; }
+  #sellAll { font-size: 14px; padding: 8px 14px; margin: 0 auto 10px; display: block; }
+
+  /* апгрейдер: слева что ставим, в центре круг шанса, справа что получим */
+  #upRow { display: flex; align-items: center; gap: 6px; }
+  .slot {
+    flex: 1; min-width: 0; min-height: 140px; border: 1px dashed #39ff1466; border-radius: 10px;
+    padding: 6px 2px; font-size: 11px; text-align: center;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+  }
+  #wheelBox { position: relative; flex: 0 0 130px; width: 130px; height: 130px; }
+  #wheel { position: absolute; inset: 0; border-radius: 50%; }
+  #wheelHole {
+    position: absolute; inset: 16px; border-radius: 50%; background: #000;
+    display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: bold; color: #fff;
+  }
+  #arrow {   /* стрелка крутится вокруг центра круга (нижний конец стрелки) */
+    position: absolute; left: calc(50% - 2px); top: 2px; width: 4px; height: calc(50% - 2px);
+    background: #ffd400; border-radius: 2px; box-shadow: 0 0 6px #ffd400;
+    transform-origin: 50% 100%; transition: transform 4s cubic-bezier(0.15, 0.7, 0.2, 1);
+  }
+  #upMults { margin: 12px 0; }
+  #upGo { display: block; margin: 0 auto; }
+
+  /* окно открытия кейса: лента предметов под жёлтой чертой */
+  #spin {
+    position: absolute; inset: 0; z-index: 4000; background: #000e; display: none;
+    flex-direction: column; align-items: center; justify-content: center; gap: 16px;
+  }
+  #spinTitle { font-size: 20px; color: #fff; }
+  #spinWindow {
+    position: relative; width: 100%; height: 150px; overflow: hidden; background: #050f05;
+    border-top: 1px solid #39ff1466; border-bottom: 1px solid #39ff1466;
+  }
+  #strip { position: absolute; left: 0; top: 10px; display: flex; }
+  .cell { flex: 0 0 100px; width: 100px; height: 130px; margin-right: 4px; }
+  #spinMarker {
+    position: absolute; left: 50%; top: 0; bottom: 0; width: 3px; margin-left: -1.5px; z-index: 2;
+    background: #ffd400; box-shadow: 0 0 10px #ffd400;
+  }
+  #spinResult { display: none; flex-direction: column; align-items: center; padding: 0 16px; }
+  #spinItem { width: 170px; padding: 12px; border-bottom-width: 6px; }
+  #spinItem .inm { font-size: 16px; }
+  #spinItem .rar, #spinItem .val { font-size: 14px; }
 </style>
 </head>
 <body>
@@ -315,11 +386,58 @@
   </div>
 </div>
 
+<!-- ===== Вкладка 4: Кейсы ===== -->
+<div class="tab" id="tab-cases">
+  <div class="scroll">
+    <div class="page-title"><h1>КЕЙСЫ</h1></div>
+    <div id="cases">
+      <div id="casesBalance"></div>
+      <div id="caseList"></div>
+      <div id="chances"></div>
+
+      <div class="section-title" id="upgrader">⬆️ Апгрейдер</div>
+      <div id="upRow">
+        <div class="slot" id="upFrom"></div>
+        <div id="wheelBox">
+          <div id="wheel"></div>
+          <div id="wheelHole"><span id="upChance"></span></div>
+          <div id="arrow"></div>
+        </div>
+        <div class="slot" id="upTo"></div>
+      </div>
+      <div class="choice" id="upMults"></div>
+      <button class="green-btn" id="upGo">⬆️ АПГРЕЙД</button>
+
+      <div class="section-title" id="invTitle"></div>
+      <button class="green-btn" id="sellAll">💰 Продать всё</button>
+      <div id="inv"></div>
+    </div>
+  </div>
+</div>
+
 <!-- ===== Панель вкладок внизу ===== -->
 <div id="tabbar">
   <button data-tab="tab-radar" class="active"><span class="ico">📡</span>Локатор</button>
   <button data-tab="tab-shop"><span class="ico">🥤</span>Ассортимент</button>
   <button data-tab="tab-clicker"><span class="ico">👆</span>Кликер</button>
+  <button data-tab="tab-cases"><span class="ico">🎁</span>Кейсы</button>
+</div>
+
+<!-- ===== Окно открытия кейса ===== -->
+<div id="spin">
+  <div id="spinTitle"></div>
+  <div id="spinWindow">
+    <div id="strip"></div>
+    <div id="spinMarker"></div>
+  </div>
+  <div id="spinResult">
+    <div class="item" id="spinItem"></div>
+    <div class="btns">
+      <button class="main" id="spinTake">👍 Забрать</button>
+      <button id="spinSell"></button>
+      <button id="spinAgain">🔁 Ещё</button>
+    </div>
+  </div>
 </div>
 
 <!-- ===== Окно точки Газява Family ===== -->
@@ -1153,6 +1271,10 @@ game.clicks = game.clicks || 0;             // сколько раз нажал�
 game.pointsAdded = game.pointsAdded || 0;   // сколько точек Family добавили
 game.bestCatch = game.bestCatch || 0;       // рекорд в «Поймай пузырь»
 game.ach = game.ach || {};                  // полученные достижения: {id: true}
+game.inv = game.inv || [];                  // инвентарь из кейсов: [{s: номер газявы, r: редкость, v: цена}]
+game.casesOpened = game.casesOpened || 0;   // сколько кейсов открыто
+game.gotGold = game.gotGold || false;       // выпадала ли ★ Золотая
+game.upgradesWon = game.upgradesWon || 0;   // сколько апгрейдов удалось
 
 // каждое следующее улучшение дороже на 15%
 function upgradeCost(u) {
@@ -1221,6 +1343,7 @@ function updateClicker() {
     btn.querySelector(".cost").textContent = fmt(cost) + " 🫧";
     btn.disabled = game.bubbles < cost;
   }
+  updateCasesBalance();
   checkAchievements();
 }
 
@@ -1292,6 +1415,9 @@ const ACHIEVEMENTS = [
   { id: "mapper",  ico: "📌", title: "Картограф",           check: () => game.pointsAdded >= 1 },
   { id: "catch30", ico: "🎯", title: "Ловкач: 30 пузырей",  check: () => game.bestCatch >= 30 },
   { id: "daily",   ico: "🔥", title: "В тренде дня",        check: () => chosen === dailyIndex() },
+  { id: "case1",   ico: "📦", title: "Первый кейс",         check: () => game.casesOpened >= 1 },
+  { id: "gold",    ico: "⭐", title: "★ Золотая газява",    check: () => game.gotGold },
+  { id: "upwin",   ico: "⬆️", title: "Удачный апгрейд",     check: () => game.upgradesWon >= 1 },
 ];
 
 function checkAchievements() {
@@ -1397,12 +1523,341 @@ document.getElementById("catchClose").onclick = () => {
   document.getElementById("catchGame").style.display = "none";
 };
 
-// ===== Запуск вкладок 2 и 3 =====
+// ===== Вкладка 4: Кейсы и апгрейдер =====
+// Всё только на пузыри из кликера — настоящих денег тут нет.
+
+// Редкости как в CS. chance — шанс выпадения в %, mult — цена предмета = цена кейса × mult.
+// В среднем кейс возвращает ~90% своей цены (как и в жизни, кейсы — в минус)
+const RARITIES = [
+  { name: "Ширпотреб",     color: "#b0c3d9", chance: 55,  mult: 0.25 },
+  { name: "Армейское",     color: "#4b69ff", chance: 25,  mult: 0.6 },
+  { name: "Запрещённое",   color: "#8847ff", chance: 12,  mult: 1.5 },
+  { name: "Засекреченное", color: "#d32ce6", chance: 6,   mult: 3.5 },
+  { name: "Тайное",        color: "#eb4b4b", chance: 1.8, mult: 8 },
+  { name: "★ Золотая",     color: "#ffd700", chance: 0.2, mult: 40 },
+];
+const GOLD_R = RARITIES.length - 1;   // номер самой редкой редкости
+
+// sodas — номера газяв из массива SODAS, которые могут выпасть из кейса
+const CASES = [
+  { id: "basic",  ico: "📦", name: "Обычный",   price: 300,   color: "#b0c3d9", sodas: [5, 6, 7, 8, 16, 19] },
+  { id: "ussr",   ico: "🎖️", name: "Советский", price: 2000,  color: "#eb4b4b", sodas: [0, 1, 2, 3, 4, 17, 18] },
+  { id: "import", ico: "🌍", name: "Импортный", price: 10000, color: "#4b69ff", sodas: [9, 10, 11, 12, 13, 14, 15] },
+];
+
+const CELL = 104;        // ширина ячейки ленты (100) + отступ (4), px
+const STRIP_LEN = 50;    // сколько предметов в ленте
+const WIN_POS = 45;      // на каком месте ленты лежит выигрыш
+const SPIN_TIME = 6000;  // сколько крутится лента, мс
+
+let spinning = false;    // крутится ли сейчас лента
+let spinItem = null;     // что выпало
+let spinCase = null;     // какой кейс открывали (для кнопки «Ещё»)
+let lastTickCell = -1;   // какая ячейка была под чертой (для щелчков)
+
+// случайная редкость с учётом шансов: «отнимаем» шансы, пока число не уйдёт ниже нуля
+function rollRarity() {
+  let x = Math.random() * 100;
+  for (let i = 0; i < RARITIES.length; i++) {
+    x -= RARITIES[i].chance;
+    if (x < 0) return i;
+  }
+  return 0;
+}
+
+// новый предмет из кейса: случайная газява из кейса + случайная редкость
+function makeItem(c) {
+  const r = rollRarity();
+  const s = c.sodas[Math.floor(Math.random() * c.sodas.length)];
+  return { s: s, r: r, v: Math.max(1, Math.round(c.price * RARITIES[r].mult)) };
+}
+
+// начинка карточки предмета: бутылка, название, редкость, цена
+function itemHTML(it, bottleH) {
+  const rar = RARITIES[it.r];
+  return bottleSVG(SODAS[it.s], bottleH) + `
+    <div class="inm">${SODAS[it.s].name}</div>
+    <div class="rar" style="color:${rar.color}">${rar.name}</div>
+    <div class="val">${fmt(it.v)} 🫧</div>`;
+}
+
+function renderCases() {
+  const box = document.getElementById("caseList");
+  for (const c of CASES) {
+    const btn = document.createElement("button");
+    btn.className = "case";
+    btn.id = "case-" + c.id;
+    btn.style.borderColor = c.color;
+    btn.innerHTML = `<span class="ico">${c.ico}</span><div class="cnm">${c.name}</div>
+      <div class="price">${fmt(c.price)} 🫧</div>`;
+    btn.onclick = () => openCase(c);
+    box.appendChild(btn);
+  }
+  // шансы честно показываем игроку
+  document.getElementById("chances").innerHTML = RARITIES.map(r =>
+    `<span style="color:${r.color}">${r.name} ${r.chance}%</span>`).join(" · ");
+}
+
+// баланс и доступность кейсов (вызывается из updateClicker)
+function updateCasesBalance() {
+  document.getElementById("casesBalance").textContent = fmt(game.bubbles) + " 🫧";
+  for (const c of CASES) {
+    document.getElementById("case-" + c.id).disabled = spinning || upBusy || game.bubbles < c.price;
+  }
+}
+
+function openCase(c) {
+  if (spinning || upBusy || game.bubbles < c.price) return;
+  ensureAudio();
+  spinning = true;
+  spinCase = c;
+  game.bubbles -= c.price;
+  game.casesOpened++;
+  // результат решаем сразу и сразу сохраняем: если закрыть приложение во время прокрутки,
+  // предмет не пропадёт. Лента — только красивая анимация
+  spinItem = makeItem(c);
+  game.inv.unshift(spinItem);
+  saveData("gazyava_clicker", game);
+  updateClicker();
+
+  // лента: случайные предметы, а на месте WIN_POS — наш выигрыш
+  const strip = document.getElementById("strip");
+  strip.innerHTML = "";
+  for (let i = 0; i < STRIP_LEN; i++) {
+    const it = i === WIN_POS ? spinItem : makeItem(c);
+    const cell = document.createElement("div");
+    cell.className = "item cell";
+    cell.style.borderBottomColor = RARITIES[it.r].color;
+    cell.innerHTML = itemHTML(it, 56);
+    strip.appendChild(cell);
+  }
+  document.getElementById("spinTitle").textContent = `${c.ico} Кейс «${c.name}»`;
+  document.getElementById("spinResult").style.display = "none";
+  document.getElementById("spin").style.display = "flex";
+
+  // сдвигаем ленту так, чтобы под жёлтой чертой оказалась ячейка WIN_POS
+  // (+ случайный сдвиг внутри ячейки, чтобы черта не всегда была ровно по центру)
+  const windowW = document.getElementById("spinWindow").clientWidth;
+  const shift = WIN_POS * CELL + 50 - windowW / 2 + (Math.random() - 0.5) * 80;
+  strip.style.transition = "none";
+  strip.style.transform = "translateX(0px)";
+  strip.offsetWidth;   // заставляем браузер применить начальное положение, иначе анимации не будет
+  strip.style.transition = `transform ${SPIN_TIME}ms cubic-bezier(0.1, 0.7, 0.1, 1)`;
+  strip.style.transform = `translateX(${-shift}px)`;
+
+  lastTickCell = -1;
+  requestAnimationFrame(spinTick);
+  setTimeout(showSpinResult, SPIN_TIME + 200);
+}
+
+// «щёлк» каждый раз, когда под чертой проезжает новая ячейка
+function spinTick() {
+  if (!spinning) return;
+  const strip = document.getElementById("strip");
+  const x = new DOMMatrix(getComputedStyle(strip).transform).m41;   // текущий сдвиг ленты, px
+  const cellNow = Math.floor((-x + document.getElementById("spinWindow").clientWidth / 2) / CELL);
+  if (cellNow !== lastTickCell) {
+    lastTickCell = cellNow;
+    if (soundOn && audio) playTick();
+  }
+  requestAnimationFrame(spinTick);
+}
+
+function playTick() {
+  const t = audio.currentTime;
+  const osc = audio.createOscillator();
+  const gain = audio.createGain();
+  osc.type = "square";
+  osc.frequency.value = 1800;
+  gain.gain.setValueAtTime(0.05, t);
+  gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.03);
+  osc.connect(gain);
+  gain.connect(audio.destination);
+  osc.start(t);
+  osc.stop(t + 0.04);
+}
+
+function showSpinResult() {
+  spinning = false;
+  const it = spinItem;
+  if (it.r === GOLD_R) game.gotGold = true;   // здесь, а не раньше — чтобы достижение не выдало приз до конца ленты
+  const box = document.getElementById("spinItem");
+  box.innerHTML = itemHTML(it, 120);
+  box.style.borderBottomColor = RARITIES[it.r].color;
+  box.style.boxShadow = `0 0 25px ${RARITIES[it.r].color}`;
+  document.getElementById("spinSell").textContent = `💰 ${fmt(it.v)}`;
+  document.getElementById("spinResult").style.display = "flex";
+  if (soundOn) {
+    if (it.r >= 3) playSonarPing();   // редкий предмет — торжественный «пинг»
+    playBubbles();
+  }
+  renderInventory();
+  updateClicker();
+}
+
+function closeSpin() {
+  document.getElementById("spin").style.display = "none";
+}
+
+document.getElementById("spinTake").onclick = closeSpin;
+document.getElementById("spinSell").onclick = () => { sellItem(spinItem); closeSpin(); };
+document.getElementById("spinAgain").onclick = () => {
+  if (game.bubbles < spinCase.price) { toast("Не хватает пузырей 🫧 — покликай ещё"); return; }
+  openCase(spinCase);
+};
+
+// ===== Инвентарь =====
+let upPick = null;   // предмет, выбранный для апгрейда
+
+function renderInventory() {
+  const box = document.getElementById("inv");
+  box.innerHTML = "";
+  if (!game.inv.includes(upPick)) upPick = null;   // предмет продали — снимаем выбор
+  let sum = 0;
+  for (const it of game.inv) {
+    sum += it.v;
+    const el = document.createElement("div");
+    el.className = it === upPick ? "item picked" : "item";
+    el.style.borderBottomColor = RARITIES[it.r].color;
+    el.innerHTML = itemHTML(it, 60) +
+      `<div class="ibtns"><button class="mini sell">💰</button><button class="mini up">⬆️</button></div>`;
+    el.querySelector(".sell").onclick = () => sellItem(it);
+    el.querySelector(".up").onclick = () => pickForUpgrade(it);
+    box.appendChild(el);
+  }
+  if (!game.inv.length) box.innerHTML = '<div class="empty">Пусто. Открой кейс!</div>';
+  document.getElementById("invTitle").textContent = `🎒 Инвентарь: ${game.inv.length} шт. на ${fmt(sum)} 🫧`;
+  document.getElementById("sellAll").style.display = game.inv.length ? "" : "none";
+  renderUpgrader();
+}
+
+// продажа: пузыри возвращаются на баланс. В total (звание) не идут — это не «заработок»
+function sellItem(it) {
+  if (upBusy) return;
+  game.inv = game.inv.filter(x => x !== it);
+  game.bubbles += it.v;
+  saveData("gazyava_clicker", game);
+  if (soundOn) { ensureAudio(); playBubbles(); }
+  renderInventory();
+  updateClicker();
+}
+
+document.getElementById("sellAll").onclick = () => {
+  if (upBusy || !game.inv.length) return;
+  let sum = 0;
+  for (const it of game.inv) sum += it.v;
+  if (!confirm(`Продать все предметы (${game.inv.length} шт.) за ${fmt(sum)} 🫧?`)) return;
+  game.inv = [];
+  game.bubbles += sum;
+  saveData("gazyava_clicker", game);
+  renderInventory();
+  updateClicker();
+};
+
+// ===== Апгрейдер =====
+// Ставим предмет и выбираем множитель. Шанс = 95% / множитель.
+// Стрелка останавливается на случайном месте круга: попала в зелёное — предмет дорожает,
+// нет — сгорает. 5% — «комиссия», иначе апгрейд был бы бесплатной лотереей
+const UP_MULTS = [2, 5, 10];               // во сколько раз дороже станет предмет
+const UP_STEPS = { 2: 1, 5: 2, 10: 3 };    // на сколько ступеней вырастет редкость
+const UP_TIME = 4000;                      // сколько крутится стрелка (как в CSS #arrow), мс
+
+let upMult = 2;
+let upBusy = false;   // крутится ли стрелка
+let upRot = 0;        // текущий угол стрелки, градусов
+
+function upChance() {
+  return 0.95 / upMult;
+}
+
+// что получим при удаче: та же газява, редкость выше, цена × множитель
+function upgradedItem(it) {
+  return { s: it.s, r: Math.min(it.r + UP_STEPS[upMult], GOLD_R), v: it.v * upMult };
+}
+
+function pickForUpgrade(it) {
+  if (upBusy) return;
+  upPick = it;
+  renderInventory();
+  document.getElementById("upgrader").scrollIntoView({ behavior: "smooth" });
+}
+
+function renderUpgrader() {
+  // кнопки ×2 ×5 ×10
+  const mb = document.getElementById("upMults");
+  mb.innerHTML = "";
+  for (const m of UP_MULTS) {
+    const b = document.createElement("button");
+    b.textContent = "×" + m;
+    b.className = m === upMult ? "on" : "";
+    b.onclick = () => { if (!upBusy) { upMult = m; renderUpgrader(); } };
+    mb.appendChild(b);
+  }
+  // зелёный сектор круга = шанс победы (conic-gradient рисует круговую диаграмму)
+  const deg = upChance() * 360;
+  document.getElementById("wheel").style.background =
+    `conic-gradient(#39ff14 0deg ${deg}deg, #222 ${deg}deg 360deg)`;
+  document.getElementById("upChance").textContent = (upChance() * 100).toFixed(1) + "%";
+
+  const from = document.getElementById("upFrom");
+  const to = document.getElementById("upTo");
+  if (upPick) {
+    from.innerHTML = itemHTML(upPick, 60);
+    to.innerHTML = itemHTML(upgradedItem(upPick), 60);
+  } else {
+    from.innerHTML = "Нажми ⬆️ у предмета в инвентаре";
+    to.innerHTML = "❓";
+  }
+  document.getElementById("upGo").disabled = !upPick || upBusy;
+}
+
+function doUpgrade() {
+  if (!upPick || upBusy) return;
+  ensureAudio();
+  upBusy = true;
+  document.getElementById("upGo").disabled = true;
+  const it = upPick;
+  const target = upgradedItem(it);
+  const roll = Math.random();          // где остановится стрелка: доля круга от 0 до 1
+  const win = roll < upChance();       // попала в зелёный сектор — победа
+
+  // результат сразу записываем в сохранение (как с кейсами)
+  game.inv = game.inv.filter(x => x !== it);
+  if (win) game.inv.unshift(target);
+  saveData("gazyava_clicker", game);
+  updateClicker();
+
+  // стрелка делает 5 полных оборотов и останавливается на roll
+  upRot = upRot - (upRot % 360) + 360 * 5 + roll * 360;
+  document.getElementById("arrow").style.transform = `rotate(${upRot}deg)`;
+
+  setTimeout(() => {
+    upBusy = false;
+    upPick = null;
+    if (win) {
+      game.upgradesWon++;
+      if (target.r === GOLD_R) game.gotGold = true;
+      toast(`🎉 Апгрейд удался! ${SODAS[target.s].name} — ${fmt(target.v)} 🫧`);
+      if (soundOn) { playSonarPing(); playBubbles(); }
+    } else {
+      toast("💥 Мимо... предмет сгорел");
+    }
+    saveData("gazyava_clicker", game);
+    renderInventory();
+    updateClicker();
+  }, UP_TIME + 200);
+}
+
+document.getElementById("upGo").onclick = doUpgrade;
+
+// ===== Запуск вкладок 2, 3 и 4 =====
 renderDaily();
 renderCatalog();
 renderUpgrades();
 renderClickerBottle();
 renderAchievements();
+renderCases();
+renderInventory();
 updateClicker();
 initPoints();
 </script>
