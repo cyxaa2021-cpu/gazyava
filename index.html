@@ -303,7 +303,7 @@
     background: #ffd400; border-radius: 2px; box-shadow: 0 0 6px #ffd400;
     transform-origin: 50% 100%; transition: transform 4s cubic-bezier(0.15, 0.7, 0.2, 1);
   }
-  #upMults { margin: 12px 0; }
+  #upMults { margin: 12px 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }   /* 8 кнопок — 2 ряда по 4 */
   #upGo { display: block; margin: 0 auto; }
 
   /* окно открытия кейса: лента предметов под жёлтой чертой */
@@ -1250,18 +1250,27 @@ function chooseSoda(i) {
 // click — сколько добавляет к силе клика, auto — сколько пузыриков в секунду сам
 
 const UPGRADES = [
-  { id: "shake",   ico: "🤲", title: "Встряхнуть сильнее", sub: "+1 за клик",       cost: 15,    click: 1, auto: 0 },
-  { id: "ice",     ico: "🧊", title: "Лёд в стакан",       sub: "+1 в секунду",     cost: 50,    click: 0, auto: 1 },
-  { id: "straw",   ico: "🥤", title: "Трубочка",           sub: "+5 за клик",       cost: 250,   click: 5, auto: 0 },
-  { id: "kiosk",   ico: "🏪", title: "Ларёк с газявой",    sub: "+5 в секунду",     cost: 500,   click: 0, auto: 5 },
-  { id: "factory", ico: "🏭", title: "Завод газявы",       sub: "+30 в секунду",    cost: 4000,  click: 0, auto: 30 },
-  { id: "rocket",  ico: "🚀", title: "Газява в космосе",   sub: "+200 в секунду",   cost: 40000, click: 0, auto: 200 },
+  { id: "shake",   ico: "🤲", title: "Встряхнуть сильнее",  sub: "+1 за клик",        cost: 15,      click: 1,   auto: 0 },
+  { id: "ice",     ico: "🧊", title: "Лёд в стакан",        sub: "+1 в секунду",      cost: 50,      click: 0,   auto: 1 },
+  { id: "bottle2", ico: "🍾", title: "Двухлитровка",        sub: "+2 за клик",        cost: 100,     click: 2,   auto: 0 },
+  { id: "straw",   ico: "🥤", title: "Трубочка",            sub: "+5 за клик",        cost: 250,     click: 5,   auto: 0 },
+  { id: "kiosk",   ico: "🏪", title: "Ларёк с газявой",     sub: "+5 в секунду",      cost: 500,     click: 0,   auto: 5 },
+  { id: "fridge",  ico: "❄️", title: "Холодильник",         sub: "+15 в секунду",     cost: 1500,    click: 0,   auto: 15 },
+  { id: "glove",   ico: "🧤", title: "Перчатка газировщика", sub: "+25 за клик",      cost: 3000,    click: 25,  auto: 0 },
+  { id: "factory", ico: "🏭", title: "Завод газявы",        sub: "+30 в секунду",     cost: 4000,    click: 0,   auto: 30 },
+  { id: "vending", ico: "🥫", title: "Автомат с газявой",   sub: "+80 в секунду",     cost: 12000,   click: 0,   auto: 80 },
+  { id: "rocket",  ico: "🚀", title: "Газява в космосе",    sub: "+200 в секунду",    cost: 40000,   click: 0,   auto: 200 },
+  { id: "golden",  ico: "🏆", title: "Золотая бутылка",     sub: "+200 за клик",      cost: 100000,  click: 200, auto: 0 },
+  { id: "truck",   ico: "🚚", title: "Фура газявы",         sub: "+600 в секунду",    cost: 150000,  click: 0,   auto: 600 },
+  { id: "planet",  ico: "🪐", title: "Планета газявы",      sub: "+2 500 в секунду",  cost: 800000,  click: 0,   auto: 2500 },
+  { id: "portal",  ico: "🌀", title: "Портал в газявную вселенную", sub: "+12 000 в секунду", cost: 5000000, click: 0, auto: 12000 },
 ];
 
 // звания по количеству всех собранных пузыриков
 const RANKS = [
   [0, "Новичок газявы"], [100, "Любитель пузыриков"], [1000, "Газировщик"],
   [10000, "Сомелье газявы"], [100000, "Газявный магнат"], [1000000, "Властелин газявы 👑"],
+  [10000000, "Газявный император 🏛️"], [100000000, "Бог газявы 🌌"],
 ];
 
 // состояние игры: сколько пузыриков сейчас, сколько всего, сколько куплено улучшений
@@ -1275,6 +1284,7 @@ game.inv = game.inv || [];                  // инвентарь из кейс�
 game.casesOpened = game.casesOpened || 0;   // сколько кейсов открыто
 game.gotGold = game.gotGold || false;       // выпадала ли ★ Золотая
 game.upgradesWon = game.upgradesWon || 0;   // сколько апгрейдов удалось
+game.bigWin = game.bigWin || false;         // удался ли апгрейд ×20 и выше
 
 // каждое следующее улучшение дороже на 15%
 function upgradeCost(u) {
@@ -1418,6 +1428,9 @@ const ACHIEVEMENTS = [
   { id: "case1",   ico: "📦", title: "Первый кейс",         check: () => game.casesOpened >= 1 },
   { id: "gold",    ico: "⭐", title: "★ Золотая газява",    check: () => game.gotGold },
   { id: "upwin",   ico: "⬆️", title: "Удачный апгрейд",     check: () => game.upgradesWon >= 1 },
+  { id: "case50",  ico: "🎰", title: "Кейсоман: 50 кейсов", check: () => game.casesOpened >= 50 },
+  { id: "risk",    ico: "🎲", title: "Рисковый: ×20 и выше", check: () => game.bigWin },
+  { id: "portal",  ico: "🌀", title: "Открыл портал",       check: () => (game.owned.portal || 0) > 0 },
 ];
 
 function checkAchievements() {
@@ -1539,10 +1552,17 @@ const RARITIES = [
 const GOLD_R = RARITIES.length - 1;   // номер самой редкой редкости
 
 // sodas — номера газяв из массива SODAS, которые могут выпасть из кейса
+// (номера: 0 Байкал … 5 Лимонад, 6–8 Добрый, 9–15 импорт, 16–19 минералки)
 const CASES = [
-  { id: "basic",  ico: "📦", name: "Обычный",   price: 300,   color: "#b0c3d9", sodas: [5, 6, 7, 8, 16, 19] },
-  { id: "ussr",   ico: "🎖️", name: "Советский", price: 2000,  color: "#eb4b4b", sodas: [0, 1, 2, 3, 4, 17, 18] },
-  { id: "import", ico: "🌍", name: "Импортный", price: 10000, color: "#4b69ff", sodas: [9, 10, 11, 12, 13, 14, 15] },
+  { id: "mineral", ico: "💧", name: "Минеральный", price: 100,   color: "#90caf9", sodas: [16, 17, 18, 19] },
+  { id: "basic",   ico: "📦", name: "Обычный",     price: 300,   color: "#b0c3d9", sodas: [5, 6, 7, 8, 16, 19] },
+  { id: "dobry",   ico: "🟢", name: "Добрый",      price: 800,   color: "#43a047", sodas: [6, 7, 8] },
+  { id: "daily",   ico: "🔥", name: "Газява дня",  price: 1500,  color: "#ff8c00", sodas: [dailyIndex()] },   // одна газява, меняется каждый день
+  { id: "ussr",    ico: "🎖️", name: "Советский",   price: 2000,  color: "#eb4b4b", sodas: [0, 1, 2, 3, 4, 17, 18] },
+  { id: "citrus",  ico: "🍋", name: "Цитрусовый",  price: 4000,  color: "#f4d03f", sodas: [7, 8, 11, 12, 13, 15] },
+  { id: "cola",    ico: "🥊", name: "Кола-войны",  price: 7000,  color: "#8b0000", sodas: [6, 9, 10] },
+  { id: "import",  ico: "🌍", name: "Импортный",   price: 10000, color: "#4b69ff", sodas: [9, 10, 11, 12, 13, 14, 15] },
+  { id: "legend",  ico: "👑", name: "Легендарный", price: 50000, color: "#ffd700", sodas: SODAS.map((s, i) => i) },   // все 20 газяв
 ];
 
 const CELL = 104;        // ширина ячейки ленты (100) + отступ (4), px
@@ -1758,8 +1778,9 @@ document.getElementById("sellAll").onclick = () => {
 // Ставим предмет и выбираем множитель. Шанс = 95% / множитель.
 // Стрелка останавливается на случайном месте круга: попала в зелёное — предмет дорожает,
 // нет — сгорает. 5% — «комиссия», иначе апгрейд был бы бесплатной лотереей
-const UP_MULTS = [2, 5, 10];               // во сколько раз дороже станет предмет
-const UP_STEPS = { 2: 1, 5: 2, 10: 3 };    // на сколько ступеней вырастет редкость
+const UP_MULTS = [1.5, 2, 3, 5, 10, 20, 50, 100];   // во сколько раз дороже станет предмет
+// на сколько ступеней вырастет редкость при каждом множителе
+const UP_STEPS = { 1.5: 0, 2: 1, 3: 1, 5: 2, 10: 3, 20: 3, 50: 4, 100: 5 };
 const UP_TIME = 4000;                      // сколько крутится стрелка (как в CSS #arrow), мс
 
 let upMult = 2;
@@ -1772,7 +1793,7 @@ function upChance() {
 
 // что получим при удаче: та же газява, редкость выше, цена × множитель
 function upgradedItem(it) {
-  return { s: it.s, r: Math.min(it.r + UP_STEPS[upMult], GOLD_R), v: it.v * upMult };
+  return { s: it.s, r: Math.min(it.r + UP_STEPS[upMult], GOLD_R), v: Math.round(it.v * upMult) };
 }
 
 function pickForUpgrade(it) {
@@ -1797,7 +1818,9 @@ function renderUpgrader() {
   const deg = upChance() * 360;
   document.getElementById("wheel").style.background =
     `conic-gradient(#39ff14 0deg ${deg}deg, #222 ${deg}deg 360deg)`;
-  document.getElementById("upChance").textContent = (upChance() * 100).toFixed(1) + "%";
+  const percent = upChance() * 100;
+  // маленькие шансы (×100 — меньше 1%) показываем с двумя знаками после запятой
+  document.getElementById("upChance").textContent = percent.toFixed(percent < 10 ? 2 : 1) + "%";
 
   const from = document.getElementById("upFrom");
   const to = document.getElementById("upTo");
@@ -1837,6 +1860,7 @@ function doUpgrade() {
     if (win) {
       game.upgradesWon++;
       if (target.r === GOLD_R) game.gotGold = true;
+      if (upMult >= 20) game.bigWin = true;
       toast(`🎉 Апгрейд удался! ${SODAS[target.s].name} — ${fmt(target.v)} 🫧`);
       if (soundOn) { playSonarPing(); playBubbles(); }
     } else {
