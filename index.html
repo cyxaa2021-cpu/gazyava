@@ -23,8 +23,9 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 
-<!-- Всё оформление — в отдельном файле -->
-<link rel="stylesheet" href="style.css">
+<!-- Всё оформление — в отдельном файле.
+     ?v=4 — номер версии: поменяли номер — телефоны скачают файлы заново, а не возьмут старые из кэша -->
+<link rel="stylesheet" href="style.css?v=4">
 </head>
 <body>
 
@@ -415,16 +416,16 @@
 <div id="toast"></div>
 
 <!-- Код игры. Порядок важен: core.js первым (общие функции), main.js последним (запуск) -->
-<script src="js/core.js"></script>
-<script src="js/sodas.js"></script>
-<script src="js/radar.js"></script>
-<script src="js/clicker.js"></script>
-<script src="js/cases.js"></script>
-<script src="js/shop.js"></script>
-<script src="js/season.js"></script>
-<script src="js/profile.js"></script>
-<script src="js/online.js"></script>
-<script src="js/trades.js"></script>
-<script src="js/main.js"></script>
+<script src="js/core.js?v=4"></script>
+<script src="js/sodas.js?v=4"></script>
+<script src="js/radar.js?v=4"></script>
+<script src="js/clicker.js?v=4"></script>
+<script src="js/cases.js?v=4"></script>
+<script src="js/shop.js?v=4"></script>
+<script src="js/season.js?v=4"></script>
+<script src="js/profile.js?v=4"></script>
+<script src="js/online.js?v=4"></script>
+<script src="js/trades.js?v=4"></script>
+<script src="js/main.js?v=4"></script>
 </body>
 </html>

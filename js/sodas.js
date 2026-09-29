@@ -45,35 +45,37 @@ const ENERGY = [
 ];
 
 // Кейс Ильи Калашникова «Маленькие радости» (названия придумали ребята)
+// shape — форма бутылки (см. SHAPES ниже), icon — значок на этикетке, stroke — цвет обводки
+const LEGEND_GOLD = "#ffd700";   // обводка легендарных
 const ILYA_SODAS = [
-  { name: "Газировка «Автомат выдал сдачу»", desc: "Вкус металла и надежды.", liquid: "#b0bec5", label: "#607d8b", cap: "#cfd8dc" },
-  { name: "Лимонад «Сосед сверлит по расписанию»", desc: "Слышно только с 9 до 18, выходные свято.", liquid: "#fff59d", label: "#8d6e63", cap: "#ffca28" },
-  { name: "Кола «Зарплата вовремя»", desc: "Привкус стабильности.", liquid: "#2a120a", label: "#2e7d32", cap: "#66bb6a" },
-  { name: "Тархун «Очередь движется»", desc: "Освежает, как новость об отмене пары.", liquid: "#2ecc40", label: "#1b5e20", cap: "#e0e0e0" },
-  { name: "Дюшес «Второй носок нашёлся»", desc: "Сладкий, как утро без поисков.", liquid: "#f4d03f", label: "#7e57c2", cap: "#f1c40f" },
-  { name: "Напиток «Маршрутка пришла пустая»", desc: "Едешь сидя, пьёшь лёжа.", liquid: "#ffcc80", label: "#f9a825", cap: "#212121" },
-  { name: "Газировка «Пельмень не развалился»", desc: "Сытно и с газом.", liquid: "#fff8e1", label: "#90a4ae", cap: "#ffffff" },
-  { name: "Лимонад «Кот не скинул ёлку»", desc: "Хвойный, но без жертв.", liquid: "#a5d6a7", label: "#c62828", cap: "#2e7d32" },
-  { name: "Напиток «Начальник не пишет в субботу»", desc: "Вкус свободы.", liquid: "#81d4fa", label: "#0d47a1", cap: "#4fc3f7" },
-  { name: "Газировка «Пробка не улетела в глаз»", desc: "Осторожно, но приятно.", liquid: "#e1f5fe", label: "#ff7043", cap: "#d84315" },
+  { name: "Газировка «Автомат выдал сдачу»", desc: "Вкус металла и надежды.", liquid: "#b0bec5", label: "#607d8b", cap: "#cfd8dc", shape: "glass", icon: "💰" },
+  { name: "Лимонад «Сосед сверлит по расписанию»", desc: "Слышно только с 9 до 18, выходные свято.", liquid: "#fff59d", label: "#8d6e63", cap: "#ffca28", shape: "stout", icon: "🔨" },
+  { name: "Кола «Зарплата вовремя»", desc: "Привкус стабильности.", liquid: "#2a120a", label: "#2e7d32", cap: "#66bb6a", shape: "pet", icon: "💵" },
+  { name: "Тархун «Очередь движется»", desc: "Освежает, как новость об отмене пары.", liquid: "#2ecc40", label: "#1b5e20", cap: "#e0e0e0", shape: "round", icon: "🚶" },
+  { name: "Дюшес «Второй носок нашёлся»", desc: "Сладкий, как утро без поисков.", liquid: "#f4d03f", label: "#7e57c2", cap: "#f1c40f", shape: "stout", icon: "🧦" },
+  { name: "Напиток «Маршрутка пришла пустая»", desc: "Едешь сидя, пьёшь лёжа.", liquid: "#ffcc80", label: "#f9a825", cap: "#212121", shape: "pet", icon: "🚐" },
+  { name: "Газировка «Пельмень не развалился»", desc: "Сытно и с газом.", liquid: "#fff8e1", label: "#90a4ae", cap: "#ffffff", shape: "round", icon: "🥟" },
+  { name: "Лимонад «Кот не скинул ёлку»", desc: "Хвойный, но без жертв.", liquid: "#a5d6a7", label: "#c62828", cap: "#2e7d32", shape: "glass", icon: "🐈" },
+  { name: "Напиток «Начальник не пишет в субботу»", desc: "Вкус свободы.", liquid: "#81d4fa", label: "#0d47a1", cap: "#4fc3f7", shape: "pet", icon: "📵" },
+  { name: "Газировка «Пробка не улетела в глаз»", desc: "Осторожно, но приятно.", liquid: "#e1f5fe", label: "#ff7043", cap: "#d84315", shape: "stout", icon: "👁️" },
   // 👑 Легендарные: «Все слышали, но никто не видел. А если видел — не докажет»
-  { name: "Кола «Как в 90-х, но не отравился»", desc: "Тот самый вкус, но без последствий.", liquid: "#2a120a", label: "#ffd700", cap: "#ffd700" },
-  { name: "Лимонад «Вкус детства без очереди»", desc: "Помнишь, но не докажешь.", liquid: "#fdf2c0", label: "#ffd700", cap: "#27ae60" },
-  { name: "Тархун «Зелёный, но не отстирывается»", desc: "Пьёшь и не боишься за скатерть.", liquid: "#2ecc40", label: "#ffd700", cap: "#0b6623" },
-  { name: "Байкал «Пахнет ковром, но пьётся»", desc: "Легенда советского холодильника.", liquid: "#3b1f0e", label: "#ffd700", cap: "#c0392b" },
-  { name: "Дюшес «Слёзы ностальгии»", desc: "0% ностальгии, 100% сахара.", liquid: "#f4d03f", label: "#ffd700", cap: "#f1c40f" },
-  { name: "Лимонад «Бабушкин погреб»", desc: "Прохладный, тёмный, с привкусом банок.", liquid: "#8d6e63", label: "#ffd700", cap: "#5d4037" },
-  { name: "Газировка «Советская стеклотара»", desc: "Сдаёшь бутылку — получаешь ностальгию.", liquid: "#e0f2f1", label: "#ffd700", cap: "#9e9e9e" },
-  { name: "Напиток «Пломбир в стакане»", desc: "Газированный пломбир? Да, мы тоже не поняли.", liquid: "#fffde7", label: "#ffd700", cap: "#ffffff" },
-  { name: "Сироп «От кашля, но добровольно»", desc: "Вкус детства, когда болеешь и тебя любят.", liquid: "#b71c1c", label: "#ffd700", cap: "#ffffff" },
-  { name: "Шипучка «Язык онемел, но вкусно»", desc: "Пьёшь и говоришь с трудом, но продолжаешь.", liquid: "#e040fb", label: "#ffd700", cap: "#aa00ff" },
+  { name: "Кола «Как в 90-х, но не отравился»", desc: "Тот самый вкус, но без последствий.", liquid: "#2a120a", label: LEGEND_GOLD, cap: LEGEND_GOLD, shape: "glass", icon: "📼", stroke: LEGEND_GOLD },
+  { name: "Лимонад «Вкус детства без очереди»", desc: "Помнишь, но не докажешь.", liquid: "#fdf2c0", label: LEGEND_GOLD, cap: "#27ae60", shape: "round", icon: "🎈", stroke: LEGEND_GOLD },
+  { name: "Тархун «Зелёный, но не отстирывается»", desc: "Пьёшь и не боишься за скатерть.", liquid: "#2ecc40", label: LEGEND_GOLD, cap: "#0b6623", shape: "glass", icon: "🧼", stroke: LEGEND_GOLD },
+  { name: "Байкал «Пахнет ковром, но пьётся»", desc: "Легенда советского холодильника.", liquid: "#3b1f0e", label: LEGEND_GOLD, cap: "#c0392b", shape: "glass", icon: "🧶", stroke: LEGEND_GOLD },
+  { name: "Дюшес «Слёзы ностальгии»", desc: "0% ностальгии, 100% сахара.", liquid: "#f4d03f", label: LEGEND_GOLD, cap: "#f1c40f", shape: "round", icon: "😢", stroke: LEGEND_GOLD },
+  { name: "Лимонад «Бабушкин погреб»", desc: "Прохладный, тёмный, с привкусом банок.", liquid: "#8d6e63", label: LEGEND_GOLD, cap: "#5d4037", shape: "jar", icon: "👵", stroke: LEGEND_GOLD },
+  { name: "Газировка «Советская стеклотара»", desc: "Сдаёшь бутылку — получаешь ностальгию.", liquid: "#e0f2f1", label: LEGEND_GOLD, cap: "#9e9e9e", shape: "glass", icon: "⭐", stroke: LEGEND_GOLD },
+  { name: "Напиток «Пломбир в стакане»", desc: "Газированный пломбир? Да, мы тоже не поняли.", liquid: "#fffde7", label: LEGEND_GOLD, cap: "#fff3e0", shape: "cup", icon: "🍦", stroke: LEGEND_GOLD },
+  { name: "Сироп «От кашля, но добровольно»", desc: "Вкус детства, когда болеешь и тебя любят.", liquid: "#b71c1c", label: LEGEND_GOLD, cap: "#ffffff", shape: "vial", icon: "🤒", stroke: LEGEND_GOLD },
+  { name: "Шипучка «Язык онемел, но вкусно»", desc: "Пьёшь и говоришь с трудом, но продолжаешь.", liquid: "#e040fb", label: LEGEND_GOLD, cap: "#aa00ff", shape: "stout", icon: "👅", stroke: LEGEND_GOLD },
   // ✦ Мифическое — самое редкое
-  { name: "Газировка «Тёща приехала и уехала»", desc: "Ультра-редкость. Облегчение с пузырьками.", liquid: "#00e5ff", label: "#000", cap: "#00e5ff" },
+  { name: "Газировка «Тёща приехала и уехала»", desc: "Ультра-редкость. Облегчение с пузырьками.", liquid: "#00e5ff", label: "#000", cap: "#00e5ff", shape: "crystal", icon: "👋", stroke: "#00e5ff" },
 ];
 
 // Кейс Юры Щёголева «Заряд от Юры»
 const YURA_SODAS = [
-  { name: "Lipton зелёный", desc: "Зелёный чай для зелёного радара.", liquid: "#c5e1a5", label: "#fdd835", cap: "#fdd835" },
+  { name: "Lipton зелёный", desc: "Зелёный чай для зелёного радара.", liquid: "#c5e1a5", label: "#fdd835", cap: "#fdd835", shape: "pet", icon: "🍃" },
 ];
 
 // добавляем всё в общий список и запоминаем, с какого номера начинается каждая группа
@@ -86,18 +88,72 @@ for (const s of SODAS) { s.taste = s.taste || "секретный"; s.fizz = s.f
 let chosen = loadData("gazyava_chosen", 0);   // номер выбранной газявы
 if (!(chosen >= 0 && chosen < BASE_COUNT)) chosen = 0;
 
+// Формы бутылок (картинка 60×120). У каждой формы:
+//  cap — крышка (кусок SVG, {c} заменяется цветом крышки), body — контур бутылки,
+//  label — этикетка [x, y, ширина, высота], extra — дополнительные линии (рёбра, грани)
+const SHAPES = {
+  // обычная бутылка — как у 20 газяв из «Ассортимента»
+  bottle: { cap: '<rect x="23" y="1" width="14" height="8" rx="2" fill="{c}"/>',
+    body: "M25 9 h10 v12 q0 5 6 10 q9 8 9 20 v58 q0 8 -8 8 h-24 q-8 0 -8 -8 v-58 q0 -12 9 -20 q6 -5 6 -10 z",
+    label: [10, 60, 40, 30] },
+  // советская стеклотара: длинное узкое горлышко
+  glass: { cap: '<rect x="25" y="2" width="10" height="7" rx="1" fill="{c}"/>',
+    body: "M26 9 h8 v26 q0 6 8 12 q6 5 6 14 v47 q0 7 -7 7 h-22 q-7 0 -7 -7 v-47 q0 -9 6 -14 q8 -6 8 -12 z",
+    label: [13, 68, 34, 26], shine: "M17 64 q-1 20 0 42", dot: [24, 54] },
+  // пузатая короткая бутылка
+  stout: { cap: '<rect x="20" y="22" width="20" height="8" rx="2" fill="{c}"/>',
+    body: "M22 30 h16 v6 q14 6 14 20 v52 q0 8 -8 8 h-28 q-8 0 -8 -8 v-52 q0 -14 14 -20 z",
+    label: [8, 66, 44, 30], shine: "M12 58 q-1 20 0 44", dot: [20, 50] },
+  // круглая колба
+  round: { cap: '<rect x="25" y="2" width="10" height="7" rx="1" fill="{c}"/>',
+    body: "M26 9 h8 v30 q0 4 6 8 a26 26 0 1 1 -20 0 q6 -4 6 -8 z",
+    label: [9, 62, 42, 22], shine: "M10 72 q1 10 6 18", dot: [18, 56], bub: [[38, 88], [28, 92]] },
+  // пластиковая бутылка с рёбрами
+  pet: { cap: '<rect x="22" y="0" width="16" height="10" rx="2" fill="{c}"/>',
+    body: "M25 10 h10 v10 q0 5 6 10 q9 8 9 20 v58 q0 8 -8 8 h-24 q-8 0 -8 -8 v-58 q0 -12 9 -20 q6 -5 6 -10 z",
+    label: [10, 60, 40, 30],
+    extra: '<path d="M11 52 h38 M11 98 h38 M11 106 h38" stroke="rgba(255,255,255,0.35)" stroke-width="2"/>' },
+  // трёхлитровая банка с крышкой
+  jar: { cap: '<rect x="10" y="12" width="40" height="11" rx="3" fill="{c}"/>',
+    body: "M12 23 h36 q6 4 6 12 v73 q0 8 -8 8 h-32 q-8 0 -8 -8 v-73 q0 -8 6 -12 z",
+    label: [10, 58, 40, 32], shine: "M15 30 q-1 30 0 70", dot: [22, 40] },
+  // аптечный пузырёк с мерным колпачком
+  vial: { cap: '<rect x="18" y="2" width="24" height="16" rx="2" fill="{c}"/><path d="M22 7 h6 M22 11 h6" stroke="#999" stroke-width="1.5"/>',
+    body: "M24 18 h12 v8 q10 4 10 14 v66 q0 6 -6 6 h-20 q-6 0 -6 -6 v-66 q0 -10 10 -14 z",
+    label: [15, 58, 30, 34], shine: "M18 44 q-1 20 0 52", dot: [22, 40] },
+  // стакан с шариком пломбира сверху
+  cup: { cap: '<circle cx="30" cy="36" r="17" fill="{c}"/><circle cx="23" cy="30" r="4" fill="rgba(255,255,255,0.7)"/>',
+    body: "M10 44 h40 l-5 68 q-1 6 -7 6 h-16 q-6 0 -7 -6 z",
+    label: [14, 70, 32, 24], shine: "M15 50 q2 30 6 58", dot: [24, 56] },
+  // «кристалл» с гранями — для мифической
+  crystal: { cap: '<rect x="24" y="2" width="12" height="8" rx="1" fill="{c}"/>',
+    body: "M26 10 h8 v14 l18 24 l-8 66 h-28 l-8 -66 l18 -24 z",
+    label: [15, 62, 30, 26], shine: "M14 52 l6 50", dot: [24, 40],
+    extra: '<path d="M12 48 h36 M30 24 v90 M20 114 l10 -66 l10 66" stroke="rgba(255,255,255,0.45)" stroke-width="1.5" fill="none"/>' },
+};
+
 // Рисует бутылку в цветах газявы (SVG — картинка из кода)
 function bottleSVG(s, height) {
   if (s.can) return canSVG(s, height);
+  const sh = SHAPES[s.shape] || SHAPES.bottle;
+  const [lx, ly, lw, lh] = sh.label;
+  // обводка: белая полупрозрачная, у легендарных — золотая и толще
+  const stroke = s.stroke || "rgba(255,255,255,0.5)";
+  const strokeW = s.stroke ? 3 : 2;
+  const bub = sh.bub || [[38, 100], [28, 106]];   // два пузырька внизу бутылки
+  // значок на этикетке (есть только у напитков из именных кейсов)
+  const icon = s.icon ? `<text x="${lx + lw / 2}" y="${ly + lh / 2}" font-size="${Math.min(lh - 4, 20)}"
+    text-anchor="middle" dominant-baseline="central">${s.icon}</text>` : "";
   return `<svg viewBox="0 0 60 120" width="${height / 2}" height="${height}">
-    <rect x="23" y="1" width="14" height="8" rx="2" fill="${s.cap}"/>
-    <path d="M25 9 h10 v12 q0 5 6 10 q9 8 9 20 v58 q0 8 -8 8 h-24 q-8 0 -8 -8 v-58 q0 -12 9 -20 q6 -5 6 -10 z"
-          fill="${s.liquid}" stroke="rgba(255,255,255,0.5)" stroke-width="2"/>
-    <rect x="10" y="60" width="40" height="30" fill="${s.label}"/>
-    <path d="M16 38 q-3 20 -2 60" stroke="rgba(255,255,255,0.35)" stroke-width="3" fill="none"/>
-    <circle cx="22" cy="46" r="2.5" fill="rgba(255,255,255,0.6)"/>
-    <circle cx="38" cy="100" r="2" fill="rgba(255,255,255,0.6)"/>
-    <circle cx="28" cy="106" r="3" fill="rgba(255,255,255,0.5)"/>
+    ${sh.cap.replace(/\{c\}/g, s.cap)}
+    <path d="${sh.body}" fill="${s.liquid}" stroke="${stroke}" stroke-width="${strokeW}"/>
+    <rect x="${lx}" y="${ly}" width="${lw}" height="${lh}" fill="${s.label}"/>
+    ${icon}
+    ${sh.extra || ""}
+    <path d="${sh.shine || "M16 38 q-3 20 -2 60"}" stroke="rgba(255,255,255,0.35)" stroke-width="3" fill="none"/>
+    <circle cx="${(sh.dot || [22, 46])[0]}" cy="${(sh.dot || [22, 46])[1]}" r="2.5" fill="rgba(255,255,255,0.6)"/>
+    <circle cx="${bub[0][0]}" cy="${bub[0][1]}" r="2" fill="rgba(255,255,255,0.6)"/>
+    <circle cx="${bub[1][0]}" cy="${bub[1][1]}" r="3" fill="rgba(255,255,255,0.5)"/>
   </svg>`;
 }
 

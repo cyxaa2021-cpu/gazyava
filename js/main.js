@@ -29,6 +29,11 @@ setupSubtabs("profileSubs", sub => {
 
 initPoints();           // подключение к Firebase (radar.js)
 
+// открыли вкладку «Онлайн», а связи нет (например, пропадал интернет) — пробуем подключиться ещё раз
+document.querySelector('#tabbar button[data-tab="tab-online"]').addEventListener("click", () => {
+  if (!online) initOnline();
+});
+
 // первый вход — сначала регистрация, иначе сразу в онлайн
 if (profile) {
   renderProfile();

@@ -12,6 +12,7 @@ const CHAT_MAX = 200;          // длина сообщения
 const CHAT_COOLDOWN = 3000;    // не чаще одного сообщения в 3 секунды
 
 let online = false;            // подключились и подтвердили свой ID
+let connecting = false;        // идёт подключение (чтобы не подключаться два раза одновременно)
 let playersCache = [];         // загруженные игроки для топов
 let topMode = "day";
 let lastChatAt = 0;
@@ -35,9 +36,10 @@ function setOnlineStatus(text) {
 
 // ===== Подключение =====
 async function initOnline() {
-  if (online) return;
+  if (online || connecting) return;
   if (!db || !firebase.auth) { setOnlineStatus("🔴 Офлайн: нет связи с сервером"); return; }
   if (!profile) { setOnlineStatus("🔴 Сначала зарегистрируйся"); return; }
+  connecting = true;
   setOnlineStatus("🟡 Подключаюсь...");
   try {
     await firebase.auth().signInAnonymously();
@@ -49,8 +51,10 @@ async function initOnline() {
     console.log("online:", e);
     setOnlineStatus(e.code === "permission-denied"
       ? "🔴 Этот ID уже занят другим телефоном. Перенеси прогресс через экспорт/импорт"
-      : "🔴 Офлайн — проверь интернет");
+      : "🔴 Офлайн — проверь интернет и открой вкладку ещё раз");
     return;
+  } finally {
+    connecting = false;
   }
   setOnlineStatus(`🟢 Онлайн · ${profile.nick} (${playerId})`);
   pushPlayer(true);
