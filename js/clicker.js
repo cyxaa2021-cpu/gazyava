@@ -35,16 +35,20 @@ function clickPower() {
   let power = 1;
   for (const u of UPGRADES) power += u.click * (game.owned[u.id] || 0);
   if (chosen === dailyIndex()) power *= 2;   // выбрана газява дня — клики ×2
-  return power;
+  if (boostOn("click2")) power *= 2;         // буст «Клики ×2»
+  return Math.round(power * (1 + merchBonus("click")));   // мерч даёт проценты
 }
 function autoPerSecond() {
   let sum = 0;
   for (const u of UPGRADES) sum += u.auto * (game.owned[u.id] || 0);
-  return sum;
+  if (boostOn("auto2")) sum *= 2;            // буст «Автосбор ×2»
+  return sum * (1 + merchBonus("auto"));
 }
+// заработок: идёт на баланс, в «всего собрано» (звание, топ сезона) и в «Топ дня»
 function addBubbles(n) {
   game.bubbles += n;
   game.total += n;
+  addDayEarned(n);
 }
 
 function renderClickerBottle() {
@@ -82,6 +86,7 @@ function updateClicker() {
   document.getElementById("rates").textContent =
     `+${fmt(clickPower())} за клик · +${fmt(autoPerSecond())} в секунду` +
     (chosen === dailyIndex() ? " · 🔥×2" : "");
+  renderBoostLines();   // активные бусты с таймером (shop.js)
   let rank = RANKS[0][1];
   for (const [need, name] of RANKS) if (game.total >= need) rank = name;
   document.getElementById("rank").textContent = "🏅 " + rank;
@@ -167,11 +172,16 @@ const ACHIEVEMENTS = [
   { id: "catch30", ico: "🎯", title: "Ловкач: 30 пузырей",  check: () => game.bestCatch >= 30 },
   { id: "daily",   ico: "🔥", title: "В тренде дня",        check: () => chosen === dailyIndex() },
   { id: "case1",   ico: "📦", title: "Первый кейс",         check: () => game.casesOpened >= 1 },
-  { id: "gold",    ico: "⭐", title: "★ Золотая газява",    check: () => game.gotGold },
+  { id: "gold",    ico: "⭐", title: "👑 Легендарка",    check: () => game.gotGold },
   { id: "upwin",   ico: "⬆️", title: "Удачный апгрейд",     check: () => game.upgradesWon >= 1 },
   { id: "case50",  ico: "🎰", title: "Кейсоман: 50 кейсов", check: () => game.casesOpened >= 50 },
   { id: "risk",    ico: "🎲", title: "Рисковый: ×20 и выше", check: () => game.bigWin },
   { id: "portal",  ico: "🌀", title: "Открыл портал",       check: () => (game.owned.portal || 0) > 0 },
+  { id: "mythic",  ico: "✦",  title: "Мифическая газява",   check: () => (game.stat.mythic || 0) > 0 },
+  { id: "mutant",  ico: "☢️", title: "Поймал мутанта",      check: () => (game.stat.mutant || 0) > 0 },
+  { id: "trade1",  ico: "🤝", title: "Первый трейд",        check: () => (game.stat.trades || 0) > 0 },
+  { id: "duel1",   ico: "⚔️", title: "Победа в дуэли",      check: () => (game.stat.duelsWon || 0) > 0 },
+  { id: "chat1",   ico: "💬", title: "Болтун: 10 сообщений", check: () => (game.stat.chat || 0) >= 10 },
 ];
 
 function checkAchievements() {
@@ -261,6 +271,7 @@ function endCatch() {
   const reward = catchScore * CATCH_REWARD;
   const isRecord = catchScore > game.bestCatch;
   if (isRecord) game.bestCatch = catchScore;
+  addStat("catch");   // для испытаний батл-пасса
   addBubbles(reward);
   saveData("gazyava_clicker", game);
   updateClicker();

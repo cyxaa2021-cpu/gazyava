@@ -341,3 +341,180 @@ h1 { margin: 0; font-size: 22px; letter-spacing: 3px; text-shadow: 0 0 8px #39ff
   border: 1px solid #39ff1488; background: #000; color: #fff;
   font: 12px "Courier New", monospace; word-break: break-all; resize: none;
 }
+/* ===================== v3: этапы 2–6 ===================== */
+/* 6 вкладок внизу */
+#tabbar button { font-size: 10px; }
+#tabbar button .ico { font-size: 20px; }
+
+/* подвкладки (кнопки-переключатели) */
+.subbar { margin: 4px 0 10px; }
+.subbar button { font-size: 13px; padding: 8px 2px; }
+.info { font-size: 12px; opacity: 0.65; text-align: center; margin: 8px 0; line-height: 1.4; }
+
+/* строка активных бустов */
+.boostline { font-size: 13px; color: #ffd400; min-height: 4px; text-align: center; }
+
+/* ===== Кейсы ===== */
+#openCount { margin: 8px 0; }
+#openCount button { padding: 6px; }
+#autoBtn { display: block; margin: 0 auto 6px; font-size: 14px; padding: 8px 14px; background: #0a1a0a; color: #39ff14; border: 1px solid #39ff14; box-shadow: none; }
+#autoBtn.on { background: #39ff14; color: #000; }
+.case { position: relative; }
+.case .by { font-size: 10px; color: #ffd400; }
+.case.named { background: linear-gradient(#1a0a14, #0a0a1a); }
+.case.free { box-shadow: 0 0 14px #39ff14; }
+.case.free .price { color: #ffd400; font-weight: bold; }
+.info-i { position: absolute; top: 2px; right: 4px; font-size: 13px; }
+.mut { font-size: 10px; color: #fff; }
+
+/* лента живого дропа */
+#dropFeed {
+  display: flex; gap: 6px; overflow-x: auto; padding: 4px 12px 8px; -webkit-overflow-scrolling: touch;
+}
+#dropFeed .empty { font-size: 11px; padding: 6px; }
+.drop {
+  flex: 0 0 62px; text-align: center; border: 1px solid #ffffff22; border-bottom: 3px solid #888;
+  border-radius: 8px; background: #0d0d0d; padding: 3px 2px; font-size: 10px;
+}
+.drop .dn { color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* окно прокрутки: несколько лент */
+#spin { overflow-y: auto; padding: calc(env(safe-area-inset-top) + 10px) 0 20px; box-sizing: border-box; justify-content: flex-start; }
+#spinTitle { margin-top: 20px; }
+#spinStrips { width: 100%; display: flex; flex-direction: column; gap: 6px; }
+.spinWindow {
+  position: relative; width: 100%; height: 150px; overflow: hidden; background: #050f05;
+  border-top: 1px solid #39ff1466; border-bottom: 1px solid #39ff1466;
+}
+#spinStrips.multi .spinWindow { height: 128px; }
+#spinStrips.compact .spinWindow { height: 70px; }
+.strip { position: absolute; left: 0; top: 6px; display: flex; }
+.cell { flex: 0 0 auto; height: 136px; margin-right: 4px; }
+#spinStrips.multi .cell { height: 116px; }
+#spinStrips.compact .cell { height: 58px; padding: 2px; }
+.spinMarker {
+  position: absolute; left: 50%; top: 0; bottom: 0; width: 3px; margin-left: -1.5px; z-index: 2;
+  background: #ffd400; box-shadow: 0 0 10px #ffd400;
+}
+#spinResult { display: none; flex-direction: column; align-items: center; padding: 0 12px; width: 100%; box-sizing: border-box; }
+#spinGot { display: flex; justify-content: center; }
+#spinGot .item { width: 180px; padding: 12px; border-bottom-width: 6px; }
+#spinGot .item .inm { font-size: 15px; white-space: normal; }
+#spinGot.many { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 6px; width: 100%; }
+#spinGot.many .item { width: auto; padding: 4px; }
+#spinGot.many .item .inm { font-size: 10px; white-space: nowrap; }
+#spinSum { color: #fff; font-size: 14px; margin-top: 10px; text-align: center; }
+.sold { font-size: 10px; color: #ffd400; }
+
+/* эффекты мутаций на бутылке */
+.bot { display: inline-block; }
+.mut1 svg { filter: drop-shadow(0 0 6px #7fdbff) saturate(0.6) brightness(1.2); }            /* ледяная */
+.mut2 svg { filter: drop-shadow(0 0 8px #ffd700) sepia(1) saturate(4) hue-rotate(5deg); }     /* золотая */
+.mut3 svg { animation: rainbow 2s linear infinite; }                                           /* радужная */
+.mut4 svg { filter: drop-shadow(0 0 10px #76ff03) hue-rotate(90deg) contrast(1.4); animation: wobble 0.6s ease-in-out infinite; }
+@keyframes rainbow { from { filter: hue-rotate(0deg) drop-shadow(0 0 6px #fff); } to { filter: hue-rotate(360deg) drop-shadow(0 0 6px #fff); } }
+@keyframes wobble { 0%, 100% { transform: rotate(-4deg); } 50% { transform: rotate(4deg); } }
+
+/* апгрейдер: поле «поставить пузыри» */
+.stake { display: flex; align-items: center; gap: 8px; font-size: 12px; margin-top: 10px; }
+.stake input, .form input, .form select, #chatInput {
+  flex: 1; min-width: 0; box-sizing: border-box; font: inherit; font-size: 16px; padding: 8px;
+  border-radius: 8px; border: 1px solid #39ff1488; background: #000; color: #fff;
+}
+
+/* окно «что внутри кейса» */
+.ci { font-size: 13px; padding: 5px 0; border-bottom: 1px solid #39ff1422; color: #fff; }
+.ci small { color: #39ff14; margin-left: 4px; }
+.ci .dim { color: #aaa; margin: 0; }
+
+/* скример */
+#scream {
+  position: absolute; inset: 0; z-index: 9000; background: #000; display: none;
+  align-items: center; justify-content: center; animation: shake 0.1s infinite;
+}
+#scream img { width: 100%; height: 100%; object-fit: cover; }
+@keyframes shake { 0% { transform: translate(4px, -3px) scale(1.05); } 50% { transform: translate(-5px, 4px) scale(1.1); } 100% { transform: translate(3px, 5px) scale(1.05); } }
+
+/* ===== Онлайн ===== */
+#online, #profile { max-width: 440px; margin: 0 auto; padding: 0 12px 20px; }
+#onlineStatus { text-align: center; font-size: 12px; margin-bottom: 4px; }
+#chatList {
+  height: 52vh; overflow-y: auto; border: 1px solid #39ff1433; border-radius: 10px;
+  padding: 6px; background: #050f05; -webkit-overflow-scrolling: touch;
+}
+.msg { display: flex; gap: 6px; margin-bottom: 8px; align-items: flex-start; }
+.msg.mine { flex-direction: row-reverse; }
+.bubble-msg { max-width: 78%; background: #0a1a0a; border: 1px solid #39ff1433; border-radius: 10px; padding: 5px 8px; }
+.msg.mine .bubble-msg { background: #12301a; }
+.mh { font-size: 11px; display: flex; gap: 6px; align-items: center; }
+.mh b { color: #fff; }
+.mh small { opacity: 0.5; }
+.mt { color: #fff; font-size: 14px; word-break: break-word; white-space: pre-wrap; }
+.del { padding: 0 4px; font-size: 10px; }
+#chatForm { display: flex; gap: 6px; margin-top: 8px; }
+#chatSend { padding: 8px 16px; font-size: 18px; box-shadow: none; }
+
+/* аватар с надетым мерчем */
+.av { position: relative; display: inline-flex; align-items: center; justify-content: center; font-size: 22px; width: 32px; height: 32px; flex: 0 0 32px; }
+.av .wear { position: absolute; right: -4px; bottom: -4px; font-size: 14px; }
+#pAvatar .av { font-size: 56px; width: 80px; height: 80px; }
+#pAvatar .av .wear { font-size: 32px; right: -10px; bottom: -8px; }
+
+/* топы */
+#topModes button { font-size: 12px; padding: 7px 2px; }
+#topRefresh { display: block; margin: 8px auto; }
+.row { display: flex; align-items: center; gap: 6px; padding: 6px 4px; border-bottom: 1px solid #39ff1422; flex-wrap: wrap; }
+.row.me { background: #12301a; border-radius: 8px; }
+.row .place { width: 26px; text-align: center; color: #fff; }
+.row .who { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.row .who b { color: #fff; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row .who small { font-size: 10px; opacity: 0.6; }
+.row .value { color: #ffd400; font-size: 13px; white-space: nowrap; }
+.row .acts { width: 100%; display: flex; gap: 6px; justify-content: flex-end; }
+
+/* трейды и дуэли */
+.form label { display: block; font-size: 12px; margin: 8px 0 4px; opacity: 0.85; }
+.form input, .form select { width: 100%; }
+.form .green-btn { display: block; margin: 12px auto 0; font-size: 15px; padding: 10px 16px; }
+#tradeInv { display: grid; grid-template-columns: repeat(auto-fill, minmax(56px, 1fr)); gap: 4px; max-height: 220px; overflow-y: auto; }
+#tradeInv .item { padding: 2px; cursor: pointer; }
+.deal { border: 1px solid #39ff1444; border-radius: 10px; padding: 8px; margin-bottom: 8px; font-size: 13px; color: #fff; background: #0a1a0a; }
+.deal .btns { margin-top: 8px; }
+.dgive { display: flex; gap: 4px; flex-wrap: wrap; margin: 6px 0; }
+.dgive .bot { border: 1px solid #ffffff22; border-radius: 6px; }
+#dealLog { font-size: 11px; opacity: 0.8; line-height: 1.6; }
+#duelItems { display: flex; gap: 8px; justify-content: center; margin: 10px 0; }
+#duelItems .item { flex: 1; }
+
+/* ===== Магазин ===== */
+#boostShop .upgrade, #merchShop { margin-bottom: 8px; }
+#merchShop { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.merch { border: 1px solid #39ff1444; border-radius: 10px; padding: 8px; text-align: center; background: #0a1a0a; }
+.merch.have { border-color: #39ff14; }
+.merch.worn { border-color: #ffd400; box-shadow: 0 0 10px #ffd40066; }
+.mico { font-size: 36px; }
+.mnm { color: #fff; font-weight: bold; font-size: 13px; }
+.msub { font-size: 11px; opacity: 0.75; min-height: 28px; margin: 2px 0 6px; }
+
+/* ===== Сезон ===== */
+#seasonHead { text-align: center; color: #fff; font-size: 14px; line-height: 1.6; }
+.bar { height: 8px; border-radius: 4px; background: #222; overflow: hidden; margin-top: 4px; }
+.bar div { height: 100%; background: linear-gradient(90deg, #39ff14, #ffd400); }
+.chal { display: flex; align-items: center; gap: 8px; padding: 8px; margin-bottom: 6px; border: 1px solid #39ff1433; border-radius: 10px; background: #0a1a0a; }
+.chal.done { opacity: 0.5; }
+.chal .ct { flex: 1; color: #fff; font-size: 13px; }
+.chal .ct small { display: block; color: #39ff14; font-size: 11px; }
+#passLevels { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.lvl {
+  display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 2px; font: inherit; font-size: 10px;
+  border: 1px solid #39ff1433; border-radius: 8px; background: #000; color: #39ff1488;
+}
+.lvl b { font-size: 16px; color: #fff; }
+.lvl.ready { border-color: #ffd400; color: #ffd400; box-shadow: 0 0 8px #ffd40066; }
+.lvl.got { border-color: #39ff14; color: #39ff14; }
+
+/* ===== Настройки ===== */
+.check { display: flex; align-items: center; gap: 8px; font-size: 14px; padding: 6px 0; color: #fff; }
+.check input { width: 20px; height: 20px; accent-color: #39ff14; }
+#setAutoSell .check { padding: 3px 0; }
+.danger-btn { display: block; margin: 8px auto; background: #ff4d4d; box-shadow: 0 0 14px #ff4d4d88; font-size: 15px; }

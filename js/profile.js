@@ -99,6 +99,8 @@ function finishRegister(message) {
   renderProfile();
   updateClicker();
   toast(message);
+  if (online) pushPlayer(true);   // ник или аватар поменялся — обновляем в топах
+  else initOnline();              // только что зарегистрировался — подключаемся (online.js)
 }
 
 document.getElementById("regSave").onclick = saveRegister;
@@ -111,7 +113,7 @@ document.getElementById("cityList").innerHTML = CITIES.map(c => `<option value="
 // ===== Вкладка «Профиль» =====
 function renderProfile() {
   if (!profile) return;
-  document.getElementById("pAvatar").textContent = profile.avatar;
+  document.getElementById("pAvatar").innerHTML = avatarHTML(profile.avatar, game.wear);
   // ник и город пишет сам игрок — выводим через textContent, а не innerHTML (так безопаснее)
   document.getElementById("pNick").textContent = profile.nick;
   document.getElementById("pInfo").textContent = `🆔 ${playerId} · 📍 ${profile.city}`;
@@ -134,8 +136,11 @@ function renderProfile() {
     ["⭐", "Лучший предмет", best ? `${SODAS[best.s].name} (${fmt(best.v)})` : "—"],
     ["🏆", "Достижения", `${Object.keys(game.ach).length} из ${ACHIEVEMENTS.length}`],
     ["🎯", "Рекорд «Поймай пузырь»", game.bestCatch],
+    ["🙏", "Получено «спасибо»", myThanks],
+    ["🎟️", "Уровень батл-пасса", `${passLevel()} (сезон ${seasonNumber()})`],
+    ["🤝", "Приглашено друзей", (profile.refsDone || []).length],
+    ["👋", "Позвал в игру", profile.ref || "—"],
     ["📅", "В игре с", new Date(profile.created).toLocaleDateString("ru-RU")],
-    ["🤝", "Позвал в игру", profile.ref || "—"],
   ];
   document.getElementById("pStats").innerHTML = stats.map(([ico, label, value]) =>
     `<div class="pstat"><span class="ico">${ico}</span><span class="lbl">${label}</span><b>${value}</b></div>`).join("");
@@ -146,7 +151,11 @@ document.getElementById("pInfo").onclick = () => copyText(playerId, "ID скоп
 
 // пока открыт профиль — обновляем цифры раз в секунду (баланс растёт от автокликов)
 setInterval(() => {
-  if (document.getElementById("tab-profile").classList.contains("active")) renderProfile();
+  if (!document.getElementById("tab-profile").classList.contains("active")) return;
+  // обновляем только открытую подвкладку
+  if (document.getElementById("subMe").style.display !== "none") renderProfile();
+  if (document.getElementById("subShop").style.display !== "none") renderShop();
+  if (document.getElementById("subSeason").style.display !== "none") renderSeason();
 }, 1000);
 
 // ===== Экспорт / импорт сохранения =====
@@ -222,6 +231,46 @@ document.getElementById("saveCopy").onclick = () =>
   copyText(document.getElementById("saveCode").value, "Код скопирован 📋 Сохрани его в заметки");
 document.getElementById("saveApply").onclick = applySaveCode;
 document.getElementById("saveClose").onclick = () => document.getElementById("saveBox").classList.remove("show");
+
+// ===== Настройки =====
+function renderSettings() {
+  document.getElementById("setScream").checked = settings.scream;
+  document.getElementById("setKeepMut").checked = settings.keepMutated;
+  // автопродажа: от самой редкой редкости к обычной
+  const box = document.getElementById("setAutoSell");
+  box.innerHTML = "";
+  for (let r = RARITIES.length - 1; r >= 0; r--) {
+    const label = document.createElement("label");
+    label.className = "check";
+    label.innerHTML = `<input type="checkbox"> <span style="color:${RARITIES[r].color}">${RARITIES[r].name}</span>`;
+    const cb = label.querySelector("input");
+    cb.checked = !!settings.autoSell[r];
+    cb.onchange = () => { settings.autoSell[r] = cb.checked; saveSettings(); };
+    box.appendChild(label);
+  }
+}
+document.getElementById("setScream").onchange = (e) => { settings.scream = e.target.checked; saveSettings(); };
+document.getElementById("setKeepMut").onchange = (e) => { settings.keepMutated = e.target.checked; saveSettings(); };
+// быстрые кнопки автопродажи: «всё дешёвое» (3 нижние редкости) и «выключить всё»
+document.getElementById("autoCheap").onclick = () => {
+  settings.autoSell = RARITIES.map((r, i) => i <= 2);
+  saveSettings();
+  renderSettings();
+};
+document.getElementById("autoNone").onclick = () => {
+  settings.autoSell = [];
+  saveSettings();
+  renderSettings();
+};
+
+// Полный сброс: два подтверждения — сначала «Да/Нет», потом нужно вписать слово СБРОС
+document.getElementById("resetBtn").onclick = () => {
+  if (!confirm("Сбросить ВЕСЬ прогресс до нуля? Пузыри, улучшения, инвентарь, мерч, батл-пасс — всё пропадёт.")) return;
+  const word = prompt("Точно? Это нельзя отменить. Впиши слово СБРОС большими буквами:");
+  if (!word || word.trim().toUpperCase() !== "СБРОС") { toast("Сброс отменён 👍"); return; }
+  resetGame(true);        // season.js
+  location.reload();      // перезапускаем игру с чистого листа (ник и ID остаются)
+};
 
 // ===== Админка =====
 // Друг сообщает тебе свой ID, ты выдаёшь или забираешь пузыри через админку.

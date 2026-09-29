@@ -21,6 +21,7 @@
 <!-- Firebase — облачная база (точки Газява Family, выдачи от админа, потом — онлайн) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 
 <!-- Всё оформление — в отдельном файле -->
 <link rel="stylesheet" href="style.css">
@@ -72,6 +73,7 @@
     <div id="clicker">
       <div id="bubblesCount">0</div>
       <div id="rates"></div>
+      <div class="boostline"></div>
       <div id="rank"></div>
       <div id="myId"></div>
       <button id="bigBottle"></button>
@@ -88,8 +90,13 @@
 <div class="tab" id="tab-cases">
   <div class="scroll">
     <div class="page-title"><h1>КЕЙСЫ</h1></div>
+    <!-- лента живого дропа: что редкое выбили игроки (online.js) -->
+    <div id="dropFeed"><div class="empty">Лента дропа появится онлайн</div></div>
     <div id="cases">
       <div id="casesBalance"></div>
+      <div class="boostline"></div>
+      <div class="choice" id="openCount"></div>
+      <button class="green-btn" id="autoBtn"></button>
       <div id="caseList"></div>
       <div id="chances"></div>
 
@@ -103,6 +110,8 @@
         </div>
         <div class="slot" id="upTo"></div>
       </div>
+      <label class="stake">+ поставить пузыри с баланса:
+        <input id="upStake" type="number" inputmode="numeric" min="0" placeholder="0"></label>
       <div class="choice" id="upMults"></div>
       <button class="green-btn" id="upGo">⬆️ АПГРЕЙД</button>
 
@@ -113,22 +122,142 @@
   </div>
 </div>
 
-<!-- ===== Вкладка 5: Профиль ===== -->
+<!-- ===== Вкладка 5: Онлайн (чат, топы, трейды, дуэли) ===== -->
+<div class="tab" id="tab-online">
+  <div class="scroll">
+    <div class="page-title"><h1>ОНЛАЙН</h1></div>
+    <div id="online">
+      <div id="onlineStatus">🔴 Офлайн</div>
+      <div class="choice subbar" id="onlineSubs">
+        <button data-sub="subChat">💬 Чат</button>
+        <button data-sub="subTops">🏆 Топы</button>
+        <button data-sub="subTrades">🤝 Трейды</button>
+        <button data-sub="subDuels">⚔️ Дуэли</button>
+      </div>
+
+      <div class="sub" id="subChat">
+        <div id="chatList"></div>
+        <div id="chatForm">
+          <input id="chatInput" maxlength="200" placeholder="Сообщение..." autocomplete="off">
+          <button class="green-btn" id="chatSend">➤</button>
+        </div>
+        <div class="info">Будь вежлив 🙂 Не пиши сюда телефоны и личные данные.</div>
+      </div>
+
+      <div class="sub" id="subTops">
+        <div class="choice" id="topModes">
+          <button data-mode="day" class="on">📅 Дня</button>
+          <button data-mode="season">🎟️ Сезона</button>
+          <button data-mode="thanks">🙏 Спасибо</button>
+          <button data-mode="cities">🏙️ Города</button>
+        </div>
+        <button class="mini" id="topRefresh">🔄 Обновить</button>
+        <div id="topList"></div>
+        <div class="info">🙏 — похвалить (раз в день), 🤝 — трейд, ⚔️ — дуэль</div>
+      </div>
+
+      <div class="sub" id="subTrades">
+        <div class="section-title">📥 Входящие</div>
+        <div id="tradeIn"></div>
+        <div class="section-title">🤝 Новый трейд</div>
+        <div class="form">
+          <label>ID игрока</label>
+          <input id="tradeTo" maxlength="6" placeholder="K7F2QX" autocapitalize="characters" autocomplete="off">
+          <label id="tradePicked"></label>
+          <div id="tradeInv"></div>
+          <label>Отдаю пузыри</label>
+          <input id="tradeGive" type="number" inputmode="numeric" min="0" placeholder="0">
+          <label>Хочу взамен пузыри (0 — подарок)</label>
+          <input id="tradeWant" type="number" inputmode="numeric" min="0" placeholder="0">
+          <button class="green-btn" id="tradeSend">📨 Отправить предложение</button>
+        </div>
+        <div class="section-title">📤 Отправленные</div>
+        <div id="tradeOut"></div>
+        <div class="section-title">📜 История</div>
+        <div id="dealLog"></div>
+      </div>
+
+      <div class="sub" id="subDuels">
+        <div class="info">Оба открываете одинаковый кейс. У кого бутылка дороже — забирает обе!</div>
+        <div class="section-title">📥 Вызовы тебе</div>
+        <div id="duelIn"></div>
+        <div class="section-title">⚔️ Вызвать на дуэль</div>
+        <div class="form">
+          <label>ID соперника</label>
+          <input id="duelTo" maxlength="6" placeholder="K7F2QX" autocapitalize="characters" autocomplete="off">
+          <label>Кейс</label>
+          <select id="duelCase"></select>
+          <button class="green-btn" id="duelSend">⚔️ Вызвать</button>
+        </div>
+        <div class="section-title">📤 Ждут ответа</div>
+        <div id="duelOut"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Вкладка 6: Профиль (профиль, магазин, сезон, настройки) ===== -->
 <div class="tab" id="tab-profile">
   <div class="scroll">
     <div class="page-title"><h1>ПРОФИЛЬ</h1></div>
     <div id="profile">
-      <div id="pAvatar"></div>
-      <div id="pNick"></div>
-      <div id="pInfo"></div>
-      <div id="pStats"></div>
-      <div class="btns">
-        <button class="main" id="pEdit">✏️ Изменить профиль</button>
-        <button id="pExport">📤 Экспорт</button>
-        <button id="pImport">📥 Импорт</button>
+      <div class="choice subbar" id="profileSubs">
+        <button data-sub="subMe">👤 Я</button>
+        <button data-sub="subShop">🛍️ Магазин</button>
+        <button data-sub="subSeason">🎟️ Сезон</button>
+        <button data-sub="subSettings">⚙️</button>
       </div>
-      <div class="info">Экспорт — это код со всем твоим прогрессом. Сохрани его в заметки:
-        если сменишь телефон или очистишь Safari, вставишь код через «Импорт».</div>
+
+      <div class="sub" id="subMe">
+        <div id="pAvatar"></div>
+        <div id="pNick"></div>
+        <div id="pInfo"></div>
+        <div id="pStats"></div>
+        <div class="btns">
+          <button class="main" id="pEdit">✏️ Изменить профиль</button>
+          <button id="pExport">📤 Экспорт</button>
+          <button id="pImport">📥 Импорт</button>
+        </div>
+        <div class="info">Экспорт — это код со всем твоим прогрессом. Сохрани его в заметки:
+          если сменишь телефон или очистишь Safari, вставишь код через «Импорт».</div>
+      </div>
+
+      <div class="sub" id="subShop">
+        <div class="section-title">⏱ Бусты</div>
+        <div class="boostline"></div>
+        <div id="boostShop"></div>
+        <div class="section-title">👕 Мерч с пузыриками</div>
+        <div class="info" id="merchTotal"></div>
+        <div id="merchShop"></div>
+      </div>
+
+      <div class="sub" id="subSeason">
+        <div id="seasonHead"></div>
+        <div class="section-title">📅 Испытания дня</div>
+        <div id="dailyList"></div>
+        <div class="section-title">🏁 Испытания сезона</div>
+        <div id="seasonList"></div>
+        <div class="section-title">🎁 Награды батл-пасса</div>
+        <div id="passLevels"></div>
+        <div class="info" id="seasonHistory"></div>
+        <div class="info">Сезон длится 30 дней. В новом сезоне прогресс обнуляется (мерч и профиль остаются),
+          а итоги прошлого сохраняются здесь.</div>
+      </div>
+
+      <div class="sub" id="subSettings">
+        <div class="section-title">⚙️ Настройки</div>
+        <label class="check"><input type="checkbox" id="setScream"> 😱 Скример в кейсах (редко!)</label>
+        <div class="section-title">💸 Автопродажа</div>
+        <div class="info">Отмеченные редкости продаются сразу после прокрутки кейса</div>
+        <div id="setAutoSell"></div>
+        <div class="btns">
+          <button id="autoCheap">Дешёвое (3 нижние)</button>
+          <button id="autoNone">Выключить всё</button>
+        </div>
+        <label class="check"><input type="checkbox" id="setKeepMut"> 🧬 Мутации не продавать автоматически</label>
+        <div class="section-title">🧨 Опасная зона</div>
+        <button class="green-btn danger-btn" id="resetBtn">🗑 Сбросить весь прогресс</button>
+      </div>
     </div>
   </div>
 </div>
@@ -139,25 +268,48 @@
   <button data-tab="tab-shop"><span class="ico">🥤</span>Газявы</button>
   <button data-tab="tab-clicker"><span class="ico">👆</span>Кликер</button>
   <button data-tab="tab-cases"><span class="ico">🎁</span>Кейсы</button>
+  <button data-tab="tab-online"><span class="ico">🌐</span>Онлайн</button>
   <button data-tab="tab-profile"><span class="ico">👤</span>Профиль</button>
 </div>
 
 <!-- ===== Окно открытия кейса ===== -->
 <div id="spin">
   <div id="spinTitle"></div>
-  <div id="spinWindow">
-    <div id="strip"></div>
-    <div id="spinMarker"></div>
-  </div>
+  <div id="spinStrips"></div>
   <div id="spinResult">
-    <div class="item" id="spinItem"></div>
+    <div id="spinGot"></div>
+    <div id="spinSum"></div>
     <div class="btns">
       <button class="main" id="spinTake">👍 Забрать</button>
       <button id="spinSell"></button>
       <button id="spinAgain">🔁 Ещё</button>
     </div>
   </div>
+  <!-- видна всё время, пока включено автооткрытие -->
+  <button class="green-btn danger-btn" id="spinStop">⏹ Стоп авто</button>
 </div>
+
+<!-- ===== Что внутри кейса ===== -->
+<div class="overlay" id="caseInfo">
+  <div class="panel">
+    <h2 id="caseInfoTitle"></h2>
+    <div id="caseInfoText"></div>
+    <div class="btns"><button class="main" id="caseInfoClose">Понятно</button></div>
+  </div>
+</div>
+
+<!-- ===== Результат дуэли ===== -->
+<div class="overlay" id="duelBox">
+  <div class="panel">
+    <h2 id="duelTitle"></h2>
+    <div id="duelItems"></div>
+    <div class="info" id="duelText"></div>
+    <div class="btns"><button class="main" id="duelClose">OK</button></div>
+  </div>
+</div>
+
+<!-- ===== Скример ===== -->
+<div id="scream"><img src="images/scream.png" alt=""></div>
 
 <!-- ===== Окно точки Газява Family ===== -->
 <div class="overlay" id="pointForm">
@@ -268,7 +420,11 @@
 <script src="js/radar.js"></script>
 <script src="js/clicker.js"></script>
 <script src="js/cases.js"></script>
+<script src="js/shop.js"></script>
+<script src="js/season.js"></script>
 <script src="js/profile.js"></script>
+<script src="js/online.js"></script>
+<script src="js/trades.js"></script>
 <script src="js/main.js"></script>
 </body>
 </html>

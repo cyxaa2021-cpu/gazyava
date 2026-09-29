@@ -173,17 +173,80 @@ function showTab(id) {
 
 // ===== Сохранение игры =====
 // состояние игры: сколько пузыриков сейчас, сколько всего, сколько куплено улучшений
-let game = loadData("gazyava_clicker", { bubbles: 0, total: 0, owned: {} });
-// новые поля — у старых сохранений их нет, заполняем нулями
-game.clicks = game.clicks || 0;             // сколько раз нажали на бутылку
-game.pointsAdded = game.pointsAdded || 0;   // сколько точек Family добавили
-game.bestCatch = game.bestCatch || 0;       // рекорд в «Поймай пузырь»
-game.ach = game.ach || {};                  // полученные достижения: {id: true}
-game.inv = game.inv || [];                  // инвентарь из кейсов: [{s: номер газявы, r: редкость, v: цена}]
-game.casesOpened = game.casesOpened || 0;   // сколько кейсов открыто
-game.gotGold = game.gotGold || false;       // выпадала ли ★ Золотая
-game.upgradesWon = game.upgradesWon || 0;   // сколько апгрейдов удалось
-game.bigWin = game.bigWin || false;         // удался ли апгрейд ×20 и выше
+let game = fixGame(loadData("gazyava_clicker", {}));
+
+// Заполняет недостающие поля. Нужна для старых сохранений (там новых полей нет)
+// и для сброса: fixGame({}) — это новая игра с нуля
+function fixGame(g) {
+  g.bubbles = g.bubbles || 0;             // пузыри на балансе
+  g.total = g.total || 0;                 // всего заработано (для званий и топа сезона)
+  g.owned = g.owned || {};                // купленные улучшения кликера: {id: сколько}
+  g.clicks = g.clicks || 0;               // сколько раз нажали на бутылку
+  g.pointsAdded = g.pointsAdded || 0;     // сколько точек Family добавили
+  g.bestCatch = g.bestCatch || 0;         // рекорд в «Поймай пузырь»
+  g.ach = g.ach || {};                    // полученные достижения: {id: true}
+  g.inv = g.inv || [];                    // инвентарь: [{s: номер напитка, r: редкость, m: мутация, v: цена}]
+  g.casesOpened = g.casesOpened || 0;     // сколько кейсов открыто
+  g.gotGold = g.gotGold || false;         // выпадала ли 👑 Легендарная
+  g.upgradesWon = g.upgradesWon || 0;     // сколько апгрейдов удалось
+  g.bigWin = g.bigWin || false;           // удался ли апгрейд ×20 и выше
+  g.stat = g.stat || {};                  // прочие счётчики для испытаний: продано, сообщений в чат...
+  g.dayKey = g.dayKey || "";              // какой сегодня день (для «Топа дня»)
+  g.dayEarned = g.dayEarned || 0;         // сколько заработано сегодня
+  g.freeDay = g.freeDay || "";            // в какой день уже крутили бесплатный кейс
+  g.boosts = g.boosts || {};              // бусты: {id: до какого времени действует}
+  g.merch = g.merch || {};                // купленный мерч: {id: true}
+  g.wear = g.wear || "";                  // какой мерч надет на аватар
+  g.pass = g.pass || { xp: 0, claimed: {}, done: {}, dayKey: "", dayBase: {} };   // батл-пасс
+  g.season = g.season || 0;               // номер сезона (0 — ещё не знаем)
+  return g;
+}
+
+// прибавить к счётчику испытаний: addStat("sold", 3)
+function addStat(name, n) {
+  game.stat[name] = (game.stat[name] || 0) + (n === undefined ? 1 : n);
+}
+
+// сегодняшняя дата строкой: «2026-09-28»
+function todayKey() {
+  const d = new Date();
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+}
+
+// учёт заработка за сегодня (для «Топа дня»): в новый день счётчик начинается с нуля
+function addDayEarned(n) {
+  if (game.dayKey !== todayKey()) { game.dayKey = todayKey(); game.dayEarned = 0; }
+  game.dayEarned += n;
+}
+
+// ===== Настройки =====
+// Хранятся отдельно от игры — сброс прогресса и новый сезон их не трогают
+let settings = loadData("gazyava_settings", {});
+settings.scream = settings.scream !== false;                // скример включён, пока его не выключили
+settings.autoSell = settings.autoSell || [];                // autoSell[номер редкости] = true — продавать сразу
+settings.keepMutated = settings.keepMutated !== false;      // мутации не продавать автоматически
+function saveSettings() { saveData("gazyava_settings", settings); }
+
+// ===== Подвкладки (кнопки-переключатели внутри вкладки) =====
+// Кнопки: <button data-sub="имя">, блоки: <div class="sub" id="имя">. Показываем выбранный блок
+function setupSubtabs(barId, onShow) {
+  const bar = document.getElementById(barId);
+  bar.querySelectorAll("button").forEach(btn => {
+    btn.onclick = () => {
+      bar.querySelectorAll("button").forEach(b => {
+        b.classList.toggle("on", b === btn);
+        document.getElementById(b.dataset.sub).style.display = b === btn ? "" : "none";
+      });
+      if (onShow) onShow(btn.dataset.sub);
+    };
+  });
+  bar.querySelector("button").click();   // сразу открываем первую
+}
+
+// защита от «вредного» текста: превращает < > & " в безопасные символы (для innerHTML)
+function esc(text) {
+  return String(text).replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]));
+}
 
 // ===== ID игрока =====
 // ID — 6 случайных символов, создаётся один раз и хранится в телефоне

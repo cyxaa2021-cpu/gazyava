@@ -25,11 +25,70 @@ const SODAS = [
   { name: "Святой Источник", taste: "просто вода с газом", desc: "Чистая газява без лишнего.", liquid: "#eaf6ff", label: "#29b6f6", cap: "#0288d1", fizz: 3 },
 ];
 
+// Обычных газяв 20 — только они есть в «Ассортименте» и в кликере.
+// Дальше в тот же массив добавляем напитки, которые бывают только в кейсах
+// (номера у старых газяв не меняются, поэтому старые сохранения не ломаются)
+const BASE_COUNT = SODAS.length;
+
+// Энергетики, которые продаются в Самаре. can: true — рисуем банку, а не бутылку
+const ENERGY = [
+  { name: "Adrenaline Rush", taste: "энергия", desc: "Классика заправок.", liquid: "#f5f5f5", label: "#111", cap: "#e53935", can: true },
+  { name: "Burn", taste: "энергия", desc: "Горит, но не обжигает.", liquid: "#ff6d00", label: "#b71c1c", cap: "#ffab00", can: true },
+  { name: "Flash Up", taste: "энергия", desc: "Вспышка по цене булки.", liquid: "#1e88e5", label: "#fdd835", cap: "#fdd835", can: true },
+  { name: "Gorilla", taste: "энергия", desc: "Сила примата в банке.", liquid: "#212121", label: "#43a047", cap: "#43a047", can: true },
+  { name: "Tornado", taste: "энергия", desc: "Сдувает сон за минуту.", liquid: "#6d4c41", label: "#ffb300", cap: "#ff7043", can: true },
+  { name: "Drive Me", taste: "энергия", desc: "Для тех, кто за рулём сессии.", liquid: "#8e24aa", label: "#00e5ff", cap: "#00e5ff", can: true },
+  { name: "Lit Energy", taste: "энергия", desc: "Модный, как кроссовки.", liquid: "#00c853", label: "#000", cap: "#76ff03", can: true },
+  { name: "Volt", taste: "энергия", desc: "220 вольт в каждом глотке.", liquid: "#ffea00", label: "#263238", cap: "#ffea00", can: true },
+  { name: "Monster", taste: "энергия", desc: "Когти на банке — не просто так.", liquid: "#1b1b1b", label: "#76ff03", cap: "#76ff03", can: true },
+  { name: "Red Bull", taste: "энергия", desc: "Окрыляет. Редкий гость на полках.", liquid: "#1565c0", label: "#c0c0c0", cap: "#e53935", can: true },
+];
+
+// Кейс Ильи Калашникова «Маленькие радости» (названия придумали ребята)
+const ILYA_SODAS = [
+  { name: "Газировка «Автомат выдал сдачу»", desc: "Вкус металла и надежды.", liquid: "#b0bec5", label: "#607d8b", cap: "#cfd8dc" },
+  { name: "Лимонад «Сосед сверлит по расписанию»", desc: "Слышно только с 9 до 18, выходные свято.", liquid: "#fff59d", label: "#8d6e63", cap: "#ffca28" },
+  { name: "Кола «Зарплата вовремя»", desc: "Привкус стабильности.", liquid: "#2a120a", label: "#2e7d32", cap: "#66bb6a" },
+  { name: "Тархун «Очередь движется»", desc: "Освежает, как новость об отмене пары.", liquid: "#2ecc40", label: "#1b5e20", cap: "#e0e0e0" },
+  { name: "Дюшес «Второй носок нашёлся»", desc: "Сладкий, как утро без поисков.", liquid: "#f4d03f", label: "#7e57c2", cap: "#f1c40f" },
+  { name: "Напиток «Маршрутка пришла пустая»", desc: "Едешь сидя, пьёшь лёжа.", liquid: "#ffcc80", label: "#f9a825", cap: "#212121" },
+  { name: "Газировка «Пельмень не развалился»", desc: "Сытно и с газом.", liquid: "#fff8e1", label: "#90a4ae", cap: "#ffffff" },
+  { name: "Лимонад «Кот не скинул ёлку»", desc: "Хвойный, но без жертв.", liquid: "#a5d6a7", label: "#c62828", cap: "#2e7d32" },
+  { name: "Напиток «Начальник не пишет в субботу»", desc: "Вкус свободы.", liquid: "#81d4fa", label: "#0d47a1", cap: "#4fc3f7" },
+  { name: "Газировка «Пробка не улетела в глаз»", desc: "Осторожно, но приятно.", liquid: "#e1f5fe", label: "#ff7043", cap: "#d84315" },
+  // 👑 Легендарные: «Все слышали, но никто не видел. А если видел — не докажет»
+  { name: "Кола «Как в 90-х, но не отравился»", desc: "Тот самый вкус, но без последствий.", liquid: "#2a120a", label: "#ffd700", cap: "#ffd700" },
+  { name: "Лимонад «Вкус детства без очереди»", desc: "Помнишь, но не докажешь.", liquid: "#fdf2c0", label: "#ffd700", cap: "#27ae60" },
+  { name: "Тархун «Зелёный, но не отстирывается»", desc: "Пьёшь и не боишься за скатерть.", liquid: "#2ecc40", label: "#ffd700", cap: "#0b6623" },
+  { name: "Байкал «Пахнет ковром, но пьётся»", desc: "Легенда советского холодильника.", liquid: "#3b1f0e", label: "#ffd700", cap: "#c0392b" },
+  { name: "Дюшес «Слёзы ностальгии»", desc: "0% ностальгии, 100% сахара.", liquid: "#f4d03f", label: "#ffd700", cap: "#f1c40f" },
+  { name: "Лимонад «Бабушкин погреб»", desc: "Прохладный, тёмный, с привкусом банок.", liquid: "#8d6e63", label: "#ffd700", cap: "#5d4037" },
+  { name: "Газировка «Советская стеклотара»", desc: "Сдаёшь бутылку — получаешь ностальгию.", liquid: "#e0f2f1", label: "#ffd700", cap: "#9e9e9e" },
+  { name: "Напиток «Пломбир в стакане»", desc: "Газированный пломбир? Да, мы тоже не поняли.", liquid: "#fffde7", label: "#ffd700", cap: "#ffffff" },
+  { name: "Сироп «От кашля, но добровольно»", desc: "Вкус детства, когда болеешь и тебя любят.", liquid: "#b71c1c", label: "#ffd700", cap: "#ffffff" },
+  { name: "Шипучка «Язык онемел, но вкусно»", desc: "Пьёшь и говоришь с трудом, но продолжаешь.", liquid: "#e040fb", label: "#ffd700", cap: "#aa00ff" },
+  // ✦ Мифическое — самое редкое
+  { name: "Газировка «Тёща приехала и уехала»", desc: "Ультра-редкость. Облегчение с пузырьками.", liquid: "#00e5ff", label: "#000", cap: "#00e5ff" },
+];
+
+// Кейс Юры Щёголева «Заряд от Юры»
+const YURA_SODAS = [
+  { name: "Lipton зелёный", desc: "Зелёный чай для зелёного радара.", liquid: "#c5e1a5", label: "#fdd835", cap: "#fdd835" },
+];
+
+// добавляем всё в общий список и запоминаем, с какого номера начинается каждая группа
+const ENERGY_START = SODAS.length;  SODAS.push(...ENERGY);
+const ILYA_START = SODAS.length;    SODAS.push(...ILYA_SODAS);
+const YURA_START = SODAS.length;    SODAS.push(...YURA_SODAS);
+// у напитков из кейсов нет вкуса и газированности — ставим по умолчанию
+for (const s of SODAS) { s.taste = s.taste || "секретный"; s.fizz = s.fizz || 4; }
+
 let chosen = loadData("gazyava_chosen", 0);   // номер выбранной газявы
-if (!(chosen >= 0 && chosen < SODAS.length)) chosen = 0;
+if (!(chosen >= 0 && chosen < BASE_COUNT)) chosen = 0;
 
 // Рисует бутылку в цветах газявы (SVG — картинка из кода)
 function bottleSVG(s, height) {
+  if (s.can) return canSVG(s, height);
   return `<svg viewBox="0 0 60 120" width="${height / 2}" height="${height}">
     <rect x="23" y="1" width="14" height="8" rx="2" fill="${s.cap}"/>
     <path d="M25 9 h10 v12 q0 5 6 10 q9 8 9 20 v58 q0 8 -8 8 h-24 q-8 0 -8 -8 v-58 q0 -12 9 -20 q6 -5 6 -10 z"
@@ -39,6 +98,17 @@ function bottleSVG(s, height) {
     <circle cx="22" cy="46" r="2.5" fill="rgba(255,255,255,0.6)"/>
     <circle cx="38" cy="100" r="2" fill="rgba(255,255,255,0.6)"/>
     <circle cx="28" cy="106" r="3" fill="rgba(255,255,255,0.5)"/>
+  </svg>`;
+}
+
+// Банка энергетика: цилиндр с «ободками» сверху и снизу
+function canSVG(s, height) {
+  return `<svg viewBox="0 0 60 120" width="${height / 2}" height="${height}">
+    <rect x="12" y="10" width="36" height="104" rx="6" fill="${s.liquid}" stroke="rgba(255,255,255,0.5)" stroke-width="2"/>
+    <rect x="14" y="6" width="32" height="8" rx="3" fill="#bdbdbd"/>
+    <rect x="12" y="44" width="36" height="40" fill="${s.label}"/>
+    <path d="M18 50 l10 -6 l-4 12 l10 -4 l-12 18 l4 -14 l-10 4 z" fill="${s.cap}"/>
+    <rect x="16" y="16" width="4" height="92" rx="2" fill="rgba(255,255,255,0.3)"/>
   </svg>`;
 }
 
@@ -64,7 +134,7 @@ function dayRandom(salt, n) {
   return Math.floor((x - Math.floor(x)) * n);
 }
 function dailyIndex() {
-  return dayRandom(1, SODAS.length);
+  return dayRandom(1, BASE_COUNT);   // газява дня — только из обычных 20
 }
 
 function renderDaily() {
@@ -79,7 +149,7 @@ function renderCatalog() {
   document.getElementById("chosen").textContent = "Твоя газява: ⭐ " + SODAS[chosen].name;
   const box = document.getElementById("catalog");
   box.innerHTML = "";
-  SODAS.forEach((s, i) => {
+  SODAS.slice(0, BASE_COUNT).forEach((s, i) => {   // напитки из кейсов в ассортименте не показываем
     const card = document.createElement("div");
     card.className = i === chosen ? "card selected" : "card";
     card.innerHTML = bottleSVG(s, 110) + `

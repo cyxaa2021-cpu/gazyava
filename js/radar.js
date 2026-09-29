@@ -476,6 +476,7 @@ function visitPlace(s) {
   visited[key] = Date.now();
   saveData("gazyava_visited", visited);
   addBubbles(VISIT_BONUS);
+  addStat("visits");   // для испытаний батл-пасса
   saveData("gazyava_clicker", game);
   updateClicker();
   toast(`✅ «${s.name}» посещён! +${VISIT_BONUS} 🫧 в кликер`);
